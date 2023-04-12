@@ -24,17 +24,21 @@ contract MyERC1155 is ERC1155, Ownable {
         require(msg.value + raisedCap <= totalSaleCap, "cannot mint more");
         uint256 tokenId;
         if (tier == 1) {
-            tokenId = TIER_1 + tokenCounts[TIER_1];
             tokenCounts[TIER_1]++;
+            tokenId = tokenCounts[TIER_1];
+            
         } else if (tier == 2) {
-            tokenId = TIER_2 + tokenCounts[TIER_2];
             tokenCounts[TIER_2]++;
+            tokenId = tokenCounts[TIER_2];
+            
         } else if (tier == 3) {
-            tokenId = TIER_3 + tokenCounts[TIER_3];
             tokenCounts[TIER_3]++;
+            tokenId = tokenCounts[TIER_3];
+            
         } else {
-            tokenId = TIER_4 + tokenCounts[TIER_4];
             tokenCounts[TIER_4]++;
+            tokenId = tokenCounts[TIER_4];
+            
         }
         _mint(account, tier, 1, "");
     }
