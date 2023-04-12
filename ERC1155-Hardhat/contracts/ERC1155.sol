@@ -16,7 +16,9 @@ contract MyERC1155 is ERC1155, Ownable {
     uint256 private raisedCap;
     uint256 private totalSaleCap;
 
-    constructor(string memory _uri) ERC1155(_uri) {}
+    constructor(string memory _uri, uint256 _saleCap) ERC1155(_uri) {
+        totalSaleCap = _saleCap;
+    }
 
     function mint(uint256 tier, address account) public payable {
         require(tier >= 1 && tier <= 4, "Invalid tier");
@@ -57,7 +59,7 @@ contract MyERC1155 is ERC1155, Ownable {
         return tokenCounts[typeId];
     }
 
-    function getTotalEthUsed() public view returns (uint256) {
+    function getTotalEthRaised() public view returns (uint256) {
         return raisedCap;
     }
 
