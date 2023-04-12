@@ -1,44 +1,67 @@
-//SPDX-License-identifier: MIT
-pragma solidity ^0.8.0;
- 
- import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
- import "@openzeppelin/contracts/utils/Counters.sol";
+// SPDX-License-Identifier: MIT
+pragma solidity =0.8.17;
 
- contract MultipleTokens is ERC1155 {
-    using Counters for Counters.Counter;
-    Counters.Counter private _tokenids;
- //   uint256 public constant token1 = 0;
-  //  uint256 public constant token2 = 1;
- //   uint256 public constant token3 = 2;
- //   uint256 public constant token4 = 5;
-   uint256 mintingLimit = 100;
- //   string public _baseURI = baseURI_;
-    //uint256 _tokenUri;
-    constructor(string memory baseURI_) ERC1155(baseURI_){
-  //     require( _balances[id][msg.sender]<= mintingLimit);
-  //     _mint(msg.sender,token1,50,"");
-      // _mint(msg.sender,token2,50,"");
-      // _mint(msg.sender,token3,50,"");
-      // _mint(msg.sender,token4,50,"");
-       
-    }
-    function mintTokens( uint256  amount, bytes memory data) external{
-       require(msg.sender != address(0));
-   
-       
-       uint256 id = _tokenids.current();
-       require(balanceOf(msg.sender , id) + amount <= mintingLimit);
-       _tokenids.increment();
-  //      
-        _mint(msg.sender, id, amount ,data);
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
+contract MyERC1155 is ERC1155, Ownable {
+    uint256 private constant TIER_1 = 1;
+    uint256 private constant TIER_2 = 2;
+    uint256 private constant TIER_3 = 3;
+    uint256 private constant TIER_4 = 4;
+
+    mapping(uint256 => uint256) private tokenCounts;
+    mapping(uint256 => uint256) private mintPrices;
+    mapping(uint256 => string) private tokenURIs;
+    uint256 private raisedCap;
+    uint256 private totalSaleCap;
+
+    constructor(string memory _uri) ERC1155(_uri) {}
+
+    function mint(uint256 tier, address account) public payable {
+        require(tier >= 1 && tier <= 4, "Invalid tier");
+        require(msg.value == mintPrices[tier], "Insufficient payment");
+        require(msg.value + raisedCap <= totalSaleCap, "cannot mint more");
+        uint256 tokenId;
+        if (tier == 1) {
+            tokenId = TIER_1 + tokenCounts[TIER_1];
+            tokenCounts[TIER_1]++;
+        } else if (tier == 2) {
+            tokenId = TIER_2 + tokenCounts[TIER_2];
+            tokenCounts[TIER_2]++;
+        } else if (tier == 3) {
+            tokenId = TIER_3 + tokenCounts[TIER_3];
+            tokenCounts[TIER_3]++;
+        } else {
+            tokenId = TIER_4 + tokenCounts[TIER_4];
+            tokenCounts[TIER_4]++;
+        }
+        _mint(account, tier, 1, "");
     }
-    function batchMint(address _to, uint256[] memory _amounts)external{
-  //     for(uint256 i=0 , i < ids.length ,i++){
-     uint256[] memory idsValues = new uint256[](_amounts.length) ; 
-     for(uint256  i=0 ; i < _amounts.length ; i++){
-           idsValues[i] = _tokenids.current();
-           _tokenids.increment();
-     }
-     _mintBatch(_to, idsValues , _amounts , "");
-         
+
+    function setMintPrice(uint256 tier, uint256 price) public onlyOwner {
+        require(tier >= 1 && tier <= 4, "Invalid tier");
+        mintPrices[tier] = price;
+    }
+
+    function setTotalSaleCapp(uint256 _newCap) public onlyOwner {
+        require(_newCap > totalSaleCap, "Invalid cap");
+        totalSaleCap = _newCap;
+    }
+    function currentSupply(uint256 typeId) external view returns (uint256) {
+        require(typeId >= TIER_1 && typeId <= TIER_4, "Invalid type ID");
+        return tokenCounts[typeId];
+    }
+
+    function getTotalEthUsed() public view returns (uint256) {
+        return raisedCap;
+    }
+
+    function setTokenURI(uint256 tokenId, string memory _uri) public onlyOwner {
+        tokenURIs[tokenId] = _uri;
+    }
+
+    function uri(uint256 tokenId) public view override returns (string memory) {
+        return tokenURIs[tokenId];
+    }
+}
