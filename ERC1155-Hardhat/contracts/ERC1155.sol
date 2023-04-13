@@ -3,8 +3,13 @@ pragma solidity =0.8.17;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
-contract MyERC1155 is ERC1155, Ownable {
+contract MyERC1155 is ERC1155, Ownable, ReentrancyGuard {
+
+    using Strings for uint256;
+
     uint256 private constant TIER_1 = 1;
     uint256 private constant TIER_2 = 2;
     uint256 private constant TIER_3 = 3;
@@ -13,6 +18,10 @@ contract MyERC1155 is ERC1155, Ownable {
     mapping(uint256 => uint256) private tokenCounts;
     mapping(uint256 => uint256) private mintPrices;
     mapping(uint256 => string) private tokenURIs;
+
+    // Mapping to keep track of the NFT IDs of all types and their owners
+    mapping(address => mapping(uint256 => uint256[])) private _nftIds;
+
     uint256 private raisedCap;
     uint256 private totalSaleCap;
 
@@ -20,28 +29,17 @@ contract MyERC1155 is ERC1155, Ownable {
         totalSaleCap = _saleCap;
     }
 
-    function mint(uint256 tier, address account) public payable {
+    function mint(uint256 tier, address account) public payable nonReentrant {
         require(tier >= 1 && tier <= 4, "Invalid tier");
         require(msg.value == mintPrices[tier], "Insufficient payment");
         require(msg.value + raisedCap <= totalSaleCap, "cannot mint more");
         uint256 tokenId;
-        if (tier == 1) {
-            tokenCounts[TIER_1]++;
-            tokenId = tokenCounts[TIER_1];
+
+            tokenCounts[tier]++;
+            tokenId = tokenCounts[tier];
             
-        } else if (tier == 2) {
-            tokenCounts[TIER_2]++;
-            tokenId = tokenCounts[TIER_2];
-            
-        } else if (tier == 3) {
-            tokenCounts[TIER_3]++;
-            tokenId = tokenCounts[TIER_3];
-            
-        } else {
-            tokenCounts[TIER_4]++;
-            tokenId = tokenCounts[TIER_4];
-            
-        }
+        uint256[] storage ids = _nftIds[account][tier];
+        ids.push(tokenId);
         _mint(account, tier, 1, "");
     }
 
@@ -63,11 +61,22 @@ contract MyERC1155 is ERC1155, Ownable {
         return raisedCap;
     }
 
+    function checkIds(address _account, uint16 _tier) public view returns(uint256[] memory){
+        uint256[] memory ids = _nftIds[_account][_tier];
+        return ids;
+    }
+
     function setTokenURI(uint256 tokenId, string memory _uri) public onlyOwner {
         tokenURIs[tokenId] = _uri;
     }
 
-    function uri(uint256 tokenId) public view override returns (string memory) {
-        return tokenURIs[tokenId];
+    function uri(uint256 tierId) public view override returns (string memory) {
+        string memory tokenURI = tokenURIs[tierId];
+        return bytes(tokenURI).length > 0 ? tokenURI : super.uri(tierId);
+    }
+
+    function tokenUri(uint256 tierId, uint256 tokenId)public view returns (string memory) {
+        string memory tokenURI = tokenURIs[tierId];
+        return bytes(tokenURI).length > 0 ? string(abi.encodePacked(tokenURI, tokenId.toString())) : super.uri(tierId);
     }
 }
