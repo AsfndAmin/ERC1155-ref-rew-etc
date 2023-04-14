@@ -4,11 +4,9 @@ pragma solidity =0.8.17;
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Strings.sol"; 
+
 
 contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
-
-    using Strings for uint256;
 
     uint8 private constant TIER_1 = 1;
     uint8 private constant TIER_2 = 2;
