@@ -19,12 +19,14 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     mapping(uint256 => bool) private nftBlacklisted;
 
     bool whitelistEnabled;
+    bool discountEnabled;
     bool isSale;
 
 
     uint256 private raisedCap;
     uint256 private totalSaleCap;
     uint256 private allowedPerMint;
+    uint256 private discountPercentage;
     uint256[] public store;
 
     
@@ -38,11 +40,23 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         if(whitelistEnabled){
         require(isWhitelisted[msg.sender] , " Not whiteListed"); 
         }
+
         require(isSale ,"sale not live");
         require(amount > 0 && amount <= allowedPerMint, "amount Exceed per mint");
-
         require(tier >= 1 && tier <= 4, "Invalid tier");
-        require(msg.value == (mintPrices[tier]*amount), "Insufficient/wrong payment");
+
+        uint256 amountToPay;
+
+        if(discountEnabled){
+            uint256 discAmount = ((mintPrices[tier]*amount) * discountPercentage)/ 1000;
+            amountToPay = (mintPrices[tier]*amount - discAmount);
+
+        }else{
+            amountToPay = mintPrices[tier]*amount;
+
+        }
+
+        require(msg.value == amountToPay, "Insufficient/wrong payment");
         require(msg.value + raisedCap <= totalSaleCap, "cannot mint more");
 
          uint256 tokenId;
