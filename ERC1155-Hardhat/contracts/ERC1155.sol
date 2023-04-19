@@ -15,10 +15,16 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
     mapping(uint256 => uint256) public tokenCounts;
     mapping(uint256 => uint256) private mintPrices;
+    mapping(address => bool) private isWhitelisted;
+    mapping(uint256 => bool) private nftBlacklisted;
+
+    bool whitelistEnabled;
+    bool isSale;
 
 
     uint256 private raisedCap;
     uint256 private totalSaleCap;
+    uint256 private allowedPerMint;
     uint256[] public store;
 
     
@@ -27,18 +33,29 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         totalSaleCap = _saleCap;
     }
 
-    function mint(uint256 tier, address account) public payable nonReentrant {
+    function mint(uint256 tier, uint256 amount) public payable nonReentrant {
+
+        if(whitelistEnabled){
+        require(isWhitelisted[msg.sender] , " Not whiteListed"); 
+        }
+        require(isSale ,"sale not live");
+        require(amount > 0 && amount <= allowedPerMint, "amount Exceed per mint");
+
         require(tier >= 1 && tier <= 4, "Invalid tier");
-        require(msg.value == mintPrices[tier], "Insufficient/wrong payment");
+        require(msg.value == (mintPrices[tier]*amount), "Insufficient/wrong payment");
         require(msg.value + raisedCap <= totalSaleCap, "cannot mint more");
-        uint256 tokenId;
+
+         uint256 tokenId;
+
+        for(uint256 i=0; i<amount; i++){
 
             tokenCounts[tier]++;
             tokenId = tokenCounts[tier];
             uint256 id  = tier * 10**uint256(digit(tokenId)) + tokenId;
             store.push(id);
             
-        _mint(account, id, 1, "");
+        _mint(msg.sender, id, 1, "");
+        }
     }
 
     function digit(uint256 n) internal pure returns (uint256) {
@@ -83,4 +100,24 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     function setBaseURI(string memory _baseURI) external onlyOwner{
         _setBaseURI(_baseURI);
     }
+
+    function addWhitelist(address[] memory _whiteListAddress) external onlyOwner {
+        for(uint256 i=0; i <= _whiteListAddress.length; i++){
+        isWhitelisted[_whiteListAddress[i]] = true;
+        }
+    }
+
+    function removeWhitelist(address _removeAddress)external onlyOwner {
+            isWhitelisted[_removeAddress] = true;
+        }
+
+
+    function blacklistNft(uint256 _nftId) external onlyOwner{
+        nftBlacklisted[_nftId] = true;
+    }
+
+    function setAllowedPerMint(uint256 _amount) external onlyOwner{
+        allowedPerMint = _amount;
+    }
+
 }
