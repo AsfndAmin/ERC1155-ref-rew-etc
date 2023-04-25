@@ -15,19 +15,23 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
     mapping(uint256 => uint256) public tokenCounts;
     mapping(uint256 => uint256) private mintPrices;
+    mapping(address => uint256) private referReward;
     mapping(address => bool) private isWhitelisted;
     mapping(uint256 => bool) private nftBlacklisted;
 
     bool whitelistEnabled;
     bool discountEnabled;
     bool isSale;
+    bool referEnabled;
 
 
     uint256 private raisedCap;
     uint256 private totalSaleCap;
     uint256 private allowedPerMint;
     uint256 private discountPercentage;
-    uint256[] public store;
+    uint256 private referDiscount;
+    uint256 private claimPoints;
+    //uint256[] public store;
 
     
 
@@ -35,14 +39,19 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         totalSaleCap = _saleCap;
     }
 
-    function mint(uint256 tier, uint256 amount) public payable nonReentrant {
-
+    function mint(uint256 tier, uint256 amount, address refferalAddress) public payable nonReentrant {
+        
         if(whitelistEnabled){
         require(isWhitelisted[msg.sender] , " Not whiteListed"); 
         }
 
+        if(referEnabled && !discountEnabled){
+            require(refferalAddress != msg.sender, "cannot refer your self"); 
+            
+        }
+
         require(isSale ,"sale not live");
-        require(amount > 0 && amount <= allowedPerMint, "amount Exceed per mint");
+        require(amount > 0 && amount <= allowedPerMint, "amount Exceed per mint"); 
         require(tier >= 1 && tier <= 4, "Invalid tier");
 
         uint256 amountToPay;
@@ -51,9 +60,15 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
             uint256 discAmount = ((mintPrices[tier]*amount) * discountPercentage)/ 1000;
             amountToPay = (mintPrices[tier]*amount - discAmount);
 
+        }else if(referEnabled){
+            uint256 refDiscAmount = ((mintPrices[tier]*amount) * referDiscount)/ 1000;
+            amountToPay = (mintPrices[tier]*amount - refDiscAmount);
+            if(refferalAddress!= address(0)){
+                referReward[refferalAddress] += tier;
+            }
+
         }else{
             amountToPay = mintPrices[tier]*amount;
-
         }
 
         require(msg.value == amountToPay, "Insufficient/wrong payment");
@@ -66,7 +81,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
             tokenCounts[tier]++;
             tokenId = tokenCounts[tier];
             uint256 id  = tier * 10**uint256(digit(tokenId)) + tokenId;
-            store.push(id);
+            //store.push(id);
             
         _mint(msg.sender, id, 1, "");
         }
@@ -125,13 +140,36 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
             isWhitelisted[_removeAddress] = true;
         }
 
-
     function blacklistNft(uint256 _nftId) external onlyOwner{
         nftBlacklisted[_nftId] = true;
     }
 
     function setAllowedPerMint(uint256 _amount) external onlyOwner{
         allowedPerMint = _amount;
+    }
+
+    function setDiscountPercentage(uint256 _percentage) external onlyOwner{
+        referDiscount = _percentage;
+    }
+
+    function setReferalDiscount(uint256 _percentage) external onlyOwner{
+        discountPercentage = _percentage;
+    }
+
+    function setReferalClaimPoints(uint256 _points) external onlyOwner{
+        claimPoints = _points;
+    }
+
+    function claimReward() external nonReentrant{
+        uint256 usersPoints = referReward[msg.sender];
+        require(usersPoints >= claimPoints, "notEnough points");
+        referReward[msg.sender] -= claimPoints;
+            tokenCounts[1]++;
+            uint256 tokenId = tokenCounts[1];
+            uint256 id  = 1 * 10**uint256(digit(tokenId)) + tokenId;
+            //store.push(id);
+            
+        _mint(msg.sender, id, 1, "");
     }
 
 }
