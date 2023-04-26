@@ -157,6 +157,22 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         claimPoints = _points;
     }
 
+    function toggleSale() external onlyOwner{ 
+        isSale = !isSale;
+    }
+
+    function toggleWhitelist() external onlyOwner{
+        whitelistEnabled = !whitelistEnabled; 
+    }
+
+    function toggleDiscount() external onlyOwner{
+        discountEnabled = !discountEnabled; 
+    }
+
+    function toggleRefer() external onlyOwner{
+        referEnabled = !referEnabled; 
+    }
+
     function claimReward() external nonReentrant{
         uint256 usersPoints = referReward[msg.sender];
         require(usersPoints >= claimPoints, "notEnough points");
