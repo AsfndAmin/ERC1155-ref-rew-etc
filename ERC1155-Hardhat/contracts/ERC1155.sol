@@ -128,7 +128,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     }
 
     function addWhitelist(address[] memory _whiteListAddress) external onlyOwner {
-        for(uint256 i=0; i <= _whiteListAddress.length; i++){
+        for(uint256 i=0; i < _whiteListAddress.length; i++){
         isWhitelisted[_whiteListAddress[i]] = true;
         }
     }
