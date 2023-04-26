@@ -8,10 +8,10 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
-    uint8 private constant TIER_1 = 1;
-    uint8 private constant TIER_2 = 2;
-    uint8 private constant TIER_3 = 3;
-    uint8 private constant TIER_4 = 4; 
+    uint256  private constant TIER_1 = 1;
+    uint256  private constant TIER_2 = 2;
+    uint256  private constant TIER_3 = 3;
+    uint256  private constant TIER_4 = 4; 
 
     mapping(uint256 => uint256) public tokenCounts;
     mapping(uint256 => uint256) private mintPrices;
@@ -40,17 +40,14 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     }
 
     function mint(uint256 tier, uint256 amount, address refferalAddress) public payable nonReentrant {
-        
+
+
+        require(isSale ,"sale not live");
+
         if(whitelistEnabled){
         require(isWhitelisted[msg.sender] , " Not whiteListed"); 
         }
 
-        if(referEnabled && !discountEnabled){
-            require(refferalAddress != msg.sender, "cannot refer your self"); 
-            
-        }
-
-        require(isSale ,"sale not live");
         require(amount > 0 && amount <= allowedPerMint, "amount Exceed per mint"); 
         require(tier >= 1 && tier <= 4, "Invalid tier");
 
@@ -61,6 +58,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
             amountToPay = (mintPrices[tier]*amount - discAmount);
 
         }else if(referEnabled){
+            require(refferalAddress != msg.sender, "cannot refer your self");
             uint256 refDiscAmount = ((mintPrices[tier]*amount) * referDiscount)/ 1000;
             amountToPay = (mintPrices[tier]*amount - refDiscAmount);
             if(refferalAddress!= address(0)){
@@ -97,18 +95,21 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 }
 
 
-    function setMintPrice(uint256 tier, uint256 price) public onlyOwner {
-        require(tier >= 1 && tier <= 4, "Invalid tier");
-        mintPrices[tier] = price;
+    function setMintPrice(uint256[] memory tier, uint256[] memory price) public onlyOwner {
+        require(tier.length == price.length && tier.length < 5, "length misMatched");
+        for(uint256 i = 0; i < tier.length; i++) {
+        require(tier[i] >= 1 && tier[i] <= 4, "Invalid tier");
+        mintPrices[tier[i]] = price[i];
+        }
     }
 
     function setTotalSaleCapp(uint256 _newCap) public onlyOwner {
         require(_newCap > totalSaleCap, "Invalid cap");
         totalSaleCap = _newCap;
     }
-    function currentSupply(uint256 typeId) external view returns (uint256) {
-        require(typeId >= TIER_1 && typeId <= TIER_4, "Invalid type ID");
-        return tokenCounts[typeId];
+    function currentSupply(uint256 tier) external view returns (uint256) {
+        require(tier >= TIER_1 && tier <= TIER_4, "Invalid type ID");
+        return tokenCounts[tier];
     }
 
     function getTotalEthRaised() public view returns (uint256) {
