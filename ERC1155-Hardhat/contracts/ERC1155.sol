@@ -115,10 +115,6 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         return raisedCap;
     }
 
-    // function checkIds(address _account, uint16 _tier) public view returns(uint256[] memory){
-    //     uint256[] memory ids = _nftIds[_account][_tier];
-    //     return ids;
-    // }
 
     function setTokenURI(uint256 _tokenId, string memory _tokenURI) external onlyOwner {
                 _setURI( _tokenId, _tokenURI);
@@ -170,6 +166,44 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
             //store.push(id);
             
         _mint(msg.sender, id, 1, "");
+    }
+
+      /**
+     * @dev See {IERC1155-safeTransferFrom}.
+     */
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) public override {
+        require(
+            from == _msgSender() || isApprovedForAll(from, _msgSender()),
+            "ERC1155: caller is not token owner or approved"
+        );
+        require(!nftBlacklisted[id], "Blacklisted");
+        _safeTransferFrom(from, to, id, amount, data);
+    }
+
+    /**
+     * @dev See {IERC1155-safeBatchTransferFrom}.
+     */
+    function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) public override {
+        require(
+            from == _msgSender() || isApprovedForAll(from, _msgSender()),
+            "ERC1155: caller is not token owner or approved"
+        );
+         for (uint256 i = 0; i < ids.length; i++) {
+             require(!nftBlacklisted[ids[i]], "Blacklisted");
+         }
+        _safeBatchTransferFrom(from, to, ids, amounts, data);
     }
 
 }
