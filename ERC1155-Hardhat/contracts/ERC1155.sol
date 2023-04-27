@@ -2,11 +2,15 @@
 pragma solidity =0.8.17;
 
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+//import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 
 contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
+
+    using SafeERC20 for IERC20;
 
     uint256  private constant TIER_1 = 1;
     uint256  private constant TIER_2 = 2;
@@ -31,10 +35,12 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     uint256 public discountPercentage;
     uint256 public referDiscount;
     uint256 public claimPoints;
+    uint256 public tier4maxCap;
     //uint256[] public store;
 
     address payable public  operationsAddress;
     address payable public treasuryAddress;
+    address public paymentToken;
 
     
 
@@ -53,6 +59,10 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
         require(amount > 0 && amount <= allowedPerMint, "amount Exceed per mint"); 
         require(tier >= 1 && tier <= 4, "Invalid tier");
+
+        if(tier == 4){
+           require(tokenCounts[tier] + amount <= tier4maxCap, "tier 4 cap reached");
+        }
 
         uint256 amountToPay;
 
@@ -74,7 +84,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
         require(msg.value == amountToPay, "Insufficient/wrong payment");
         require(msg.value + raisedCap <= totalSaleCap, "cannot mint more");
-
+        //IERC20(paymentToken).safeTransferFrom(msg.sender, address(this), amountToPay);
          uint256 tokenId;
 
         for(uint256 i=0; i<amount; i++){
@@ -160,9 +170,17 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         claimPoints = _points;
     }
 
+    function setTier4MaxCap(uint256 _cap) external onlyOwner{
+        tier4maxCap = _cap; 
+    }
+
     function setAddresses(address payable _operational, address payable _treasury) external onlyOwner{
         operationsAddress = _operational;
         treasuryAddress = _treasury;
+    }
+
+    function setPaymentToken(address _paymentToken) external onlyOwner{
+        paymentToken = _paymentToken;
     }
 
     function toggleSale() external onlyOwner{ 
