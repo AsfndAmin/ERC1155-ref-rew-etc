@@ -38,8 +38,8 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     uint256 public tier4maxCap;
     //uint256[] public store;
 
-    address payable public  operationsAddress;
-    address payable public treasuryAddress;
+    address  public  operationsAddress;
+    address  public treasuryAddress;
     address public paymentToken;
 
     
@@ -48,7 +48,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         totalSaleCap = _saleCap;
     }
 
-    function mint(uint256 tier, uint256 amount, address refferalAddress) public payable nonReentrant {
+    function mint(uint256 tier, uint256 amount, address refferalAddress) public nonReentrant {
 
 
         require(isSale ,"sale not live");
@@ -82,9 +82,8 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
             amountToPay = mintPrices[tier]*amount;
         }
 
-        require(msg.value == amountToPay, "Insufficient/wrong payment");
-        require(msg.value + raisedCap <= totalSaleCap, "cannot mint more");
-        //IERC20(paymentToken).safeTransferFrom(msg.sender, address(this), amountToPay);
+        require(amountToPay + raisedCap <= totalSaleCap, "cannot mint more");
+        IERC20(paymentToken).safeTransferFrom(msg.sender, address(this), amountToPay);
          uint256 tokenId;
 
         for(uint256 i=0; i<amount; i++){
@@ -200,12 +199,12 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     }
 
     function withdrawFunds() external onlyOwner{
-        uint256 total = address(this).balance;
+        uint256 total = IERC20(paymentToken).balanceOf(address(this));
         require(total > 1000, "low funds");
         uint256 treasuryAmount = (total*250)/1000;
         uint256 operationalAmount = (total - treasuryAmount);
-        treasuryAddress.transfer(treasuryAmount);
-        operationsAddress.transfer(operationalAmount);
+        IERC20(paymentToken).safeTransferFrom(address(this), treasuryAddress, treasuryAmount);
+        IERC20(paymentToken).safeTransferFrom(address(this), operationsAddress, operationalAmount);
     }
 
     function claimReward() external nonReentrant{
@@ -214,9 +213,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         referReward[msg.sender] -= claimPoints;
             tokenCounts[1]++;
             uint256 tokenId = tokenCounts[1];
-            uint256 id  = 1 * 10**uint256(digit(tokenId)) + tokenId;
-            //store.push(id);
-            
+            uint256 id  = 1 * 10**uint256(digit(tokenId)) + tokenId;            
         _mint(msg.sender, id, 1, "");
     }
 
