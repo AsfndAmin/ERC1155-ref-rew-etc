@@ -14,24 +14,27 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     uint256  private constant TIER_4 = 4; 
 
     mapping(uint256 => uint256) public tokenCounts;
-    mapping(uint256 => uint256) private mintPrices;
-    mapping(address => uint256) private referReward;
-    mapping(address => bool) private isWhitelisted;
-    mapping(uint256 => bool) private nftBlacklisted;
+    mapping(uint256 => uint256) public mintPrices;
+    mapping(address => uint256) public referReward;
+    mapping(address => bool) public isWhitelisted;
+    mapping(uint256 => bool) public nftBlacklisted;
 
-    bool whitelistEnabled;
-    bool discountEnabled;
-    bool isSale;
-    bool referEnabled;
+    bool public whitelistEnabled;
+    bool public discountEnabled;
+    bool public isSale;
+    bool public referEnabled;
 
 
-    uint256 private raisedCap;
-    uint256 private totalSaleCap;
-    uint256 private allowedPerMint;
-    uint256 private discountPercentage;
-    uint256 private referDiscount;
-    uint256 private claimPoints;
+    uint256 public raisedCap;
+    uint256 public totalSaleCap;
+    uint256 public allowedPerMint;
+    uint256 public discountPercentage;
+    uint256 public referDiscount;
+    uint256 public claimPoints;
     //uint256[] public store;
+
+    address payable public  operationsAddress;
+    address payable public treasuryAddress;
 
     
 
@@ -54,7 +57,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         uint256 amountToPay;
 
         if(discountEnabled){
-            uint256 discAmount = ((mintPrices[tier]*amount) * discountPercentage)/ 1000;
+            uint256 discAmount = ((mintPrices[tier]*amount) * discountPercentage)/ 1000;//100 for 10 percent
             amountToPay = (mintPrices[tier]*amount - discAmount);
 
         }else if(referEnabled){
@@ -157,6 +160,11 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         claimPoints = _points;
     }
 
+    function setAddresses(address payable _operational, address payable _treasury) external onlyOwner{
+        operationsAddress = _operational;
+        treasuryAddress = _treasury;
+    }
+
     function toggleSale() external onlyOwner{ 
         isSale = !isSale;
     }
@@ -171,6 +179,15 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
     function toggleRefer() external onlyOwner{
         referEnabled = !referEnabled; 
+    }
+
+    function withdrawFunds() external onlyOwner{
+        uint256 total = address(this).balance;
+        require(total > 1000, "low funds");
+        uint256 treasuryAmount = (total*250)/1000;
+        uint256 operationalAmount = (total - treasuryAmount);
+        treasuryAddress.transfer(treasuryAmount);
+        operationsAddress.transfer(operationalAmount);
     }
 
     function claimReward() external nonReentrant{
