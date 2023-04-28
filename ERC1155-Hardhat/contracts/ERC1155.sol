@@ -75,7 +75,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
             uint256 refDiscAmount = ((mintPrices[tier]*amount) * referDiscount)/ 1000;
             amountToPay = (mintPrices[tier]*amount - refDiscAmount);
             if(refferalAddress!= address(0)){
-                referReward[refferalAddress] += tier;
+                referReward[refferalAddress] += tier * amount; 
             }
 
         }else{
@@ -84,6 +84,8 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
         require(amountToPay + raisedCap <= totalSaleCap, "cannot mint more");
         IERC20(paymentToken).safeTransferFrom(msg.sender, address(this), amountToPay);
+        raisedCap += amountToPay;
+
          uint256 tokenId;
 
         for(uint256 i=0; i<amount; i++){
@@ -153,6 +155,11 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         nftBlacklisted[_nftId] = true;
     }
 
+    function removeBlacklistedNft(uint256 _nftId) external onlyOwner{
+        require(nftBlacklisted[_nftId] == true, "not blacklisted");
+        nftBlacklisted[_nftId] = false;
+    }
+
     function setAllowedPerMint(uint256 _amount) external onlyOwner{
         allowedPerMint = _amount;
     }
@@ -203,8 +210,8 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         require(total > 1000, "low funds");
         uint256 treasuryAmount = (total*250)/1000;
         uint256 operationalAmount = (total - treasuryAmount);
-        IERC20(paymentToken).safeTransferFrom(address(this), treasuryAddress, treasuryAmount);
-        IERC20(paymentToken).safeTransferFrom(address(this), operationsAddress, operationalAmount);
+        IERC20(paymentToken).safeTransfer(treasuryAddress, treasuryAmount);
+        IERC20(paymentToken).safeTransfer(operationsAddress, operationalAmount);
     }
 
     function claimReward() external nonReentrant{
