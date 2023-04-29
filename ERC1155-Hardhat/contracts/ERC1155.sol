@@ -3,7 +3,6 @@ pragma solidity =0.8.17;
 
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-//import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
@@ -36,11 +35,32 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     uint256 public referDiscount;
     uint256 public claimPoints;
     uint256 public tier4maxCap;
-    //uint256[] public store;
 
     address  public  operationsAddress;
     address  public treasuryAddress;
     address public paymentToken;
+
+    event nftBlacklistedEvent(uint256 _id); 
+    event nftBlacklistRemovedEvent(uint256 _id);
+    event whitelistedEvent(address[] _addresses);
+    event whitelistRemovedEvent(address _address);
+    event paymentTokenAddedEvent(address _paymentToken);
+    event companyAddrAddedEvent(address _operationsAddress, address _treasuryAddress);
+    event saleCapEvent(uint256 _cap);
+    event allowedPerMintEvent(uint256 _amount);
+    event discountPercentageEvent(uint256 _percentage); 
+    event referPercentageEvent(uint256 _percentage);
+    event referClaimPointsEvent(uint256 _points); 
+    event tier4CapEvent(uint256 _newCap);
+    event mintPricesEvent(uint256[] _teirs, uint256[] _prices);
+    event nftMintedEvent(uint256 _teir, uint256[] _ids);
+    event fundsWithdrawn(uint256 _amount);
+    event rewardMinted(uint256 _id);
+    event toggleSaleEvent(bool);
+    event toggleWhitelistEvent(bool);
+    event toggleDiscountEvent(bool);
+    event toggleReferEvent(bool);
+        
 
     
 
@@ -86,6 +106,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         IERC20(paymentToken).safeTransferFrom(msg.sender, address(this), amountToPay);
         raisedCap += amountToPay;
 
+         uint256[] memory _ids;
          uint256 tokenId;
 
         for(uint256 i=0; i<amount; i++){
@@ -93,10 +114,10 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
             tokenCounts[tier]++;
             tokenId = tokenCounts[tier];
             uint256 id  = tier * 10**uint256(digit(tokenId)) + tokenId;
-            //store.push(id);
-            
+            _ids[i] = id;
         _mint(msg.sender, id, 1, "");
         }
+        emit nftMintedEvent(tier , _ids);
     }
 
     function digit(uint256 n) internal pure returns (uint256) {
@@ -115,21 +136,25 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         require(tier[i] >= 1 && tier[i] <= 4, "Invalid tier");
         mintPrices[tier[i]] = price[i];
         }
+        emit mintPricesEvent(tier, price);
     }
 
     function setTotalSaleCapp(uint256 _newCap) public onlyOwner {
         require(_newCap > totalSaleCap, "Invalid cap");
         totalSaleCap = _newCap;
+        emit saleCapEvent(_newCap);
     }
     function currentSupply(uint256 tier) external view returns (uint256) {
         require(tier >= TIER_1 && tier <= TIER_4, "Invalid type ID");
         return tokenCounts[tier];
     }
 
-    function getTotalEthRaised() public view returns (uint256) {
-        return raisedCap;
+    function currentTokenId(uint256 tier) external view returns (uint256) {
+        require(tier >= TIER_1 && tier <= TIER_4, "Invalid type ID");
+            uint256  tokenId = tokenCounts[tier]; 
+            uint256 id  = tier * 10**uint256(digit(tokenId)) + tokenId;
+            return id ; 
     }
-
 
     function setTokenURI(uint256 _tokenId, string memory _tokenURI) external onlyOwner {
                 _setURI( _tokenId, _tokenURI);
@@ -145,64 +170,80 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         for(uint256 i=0; i < _whiteListAddress.length; i++){
         isWhitelisted[_whiteListAddress[i]] = true;
         }
+        emit whitelistedEvent(_whiteListAddress);
     }
 
     function removeWhitelist(address _removeAddress)external onlyOwner {
-            isWhitelisted[_removeAddress] = true;
+            isWhitelisted[_removeAddress] = false;
+            emit whitelistRemovedEvent(_removeAddress);
         }
 
     function blacklistNft(uint256 _nftId) external onlyOwner{
         nftBlacklisted[_nftId] = true;
+        emit nftBlacklistedEvent(_nftId);
     }
 
     function removeBlacklistedNft(uint256 _nftId) external onlyOwner{
         require(nftBlacklisted[_nftId] == true, "not blacklisted");
         nftBlacklisted[_nftId] = false;
+        emit nftBlacklistRemovedEvent(_nftId);
     }
 
     function setAllowedPerMint(uint256 _amount) external onlyOwner{
         allowedPerMint = _amount;
+        emit allowedPerMintEvent(_amount);
     }
 
     function setDiscountPercentage(uint256 _percentage) external onlyOwner{
-        referDiscount = _percentage;
+        discountPercentage = _percentage;
+        emit discountPercentageEvent(_percentage);
     }
 
     function setReferalDiscount(uint256 _percentage) external onlyOwner{
-        discountPercentage = _percentage;
+        referDiscount = _percentage;
+        emit referPercentageEvent(_percentage);
+        
     }
 
     function setReferalClaimPoints(uint256 _points) external onlyOwner{
         claimPoints = _points;
+        emit referClaimPointsEvent(_points);
     }
 
     function setTier4MaxCap(uint256 _cap) external onlyOwner{
         tier4maxCap = _cap; 
+        emit tier4CapEvent(_cap);
     }
 
-    function setAddresses(address payable _operational, address payable _treasury) external onlyOwner{
+    function setAddresses(address  _operational, address  _treasury) external onlyOwner{
         operationsAddress = _operational;
         treasuryAddress = _treasury;
+        emit companyAddrAddedEvent(_operational, _treasury);
     }
 
     function setPaymentToken(address _paymentToken) external onlyOwner{
         paymentToken = _paymentToken;
+        emit paymentTokenAddedEvent(_paymentToken);
     }
 
     function toggleSale() external onlyOwner{ 
         isSale = !isSale;
+        emit toggleSaleEvent(isSale);
     }
 
     function toggleWhitelist() external onlyOwner{
         whitelistEnabled = !whitelistEnabled; 
+        emit toggleWhitelistEvent(whitelistEnabled);
     }
 
     function toggleDiscount() external onlyOwner{
         discountEnabled = !discountEnabled; 
+        emit toggleDiscountEvent(discountEnabled);
     }
 
     function toggleRefer() external onlyOwner{
         referEnabled = !referEnabled; 
+        emit toggleReferEvent(referEnabled);
     }
 
     function withdrawFunds() external onlyOwner{
@@ -212,6 +253,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         uint256 operationalAmount = (total - treasuryAmount);
         IERC20(paymentToken).safeTransfer(treasuryAddress, treasuryAmount);
         IERC20(paymentToken).safeTransfer(operationsAddress, operationalAmount);
+        emit fundsWithdrawn(total);
     }
 
     function claimReward() external nonReentrant{
@@ -222,6 +264,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
             uint256 tokenId = tokenCounts[1];
             uint256 id  = 1 * 10**uint256(digit(tokenId)) + tokenId;            
         _mint(msg.sender, id, 1, "");
+       emit rewardMinted(id);
     }
 
       /**
