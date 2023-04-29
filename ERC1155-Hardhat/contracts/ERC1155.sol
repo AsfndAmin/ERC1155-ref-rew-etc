@@ -168,17 +168,20 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
     function addWhitelist(address[] memory _whiteListAddress) external onlyOwner {
         for(uint256 i=0; i < _whiteListAddress.length; i++){
+            require(_whiteListAddress[i] != address(0), "Cannot add null address");
         isWhitelisted[_whiteListAddress[i]] = true;
         }
         emit whitelistedEvent(_whiteListAddress);
     }
 
     function removeWhitelist(address _removeAddress)external onlyOwner {
+        require(_removeAddress != address(0), "Cannot add null address");
             isWhitelisted[_removeAddress] = false;
             emit whitelistRemovedEvent(_removeAddress);
         }
 
     function blacklistNft(uint256 _nftId) external onlyOwner{
+        require(_nftId != 0, "zero Id");
         nftBlacklisted[_nftId] = true;
         emit nftBlacklistedEvent(_nftId);
     }
@@ -190,38 +193,45 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     }
 
     function setAllowedPerMint(uint256 _amount) external onlyOwner{
+        
         allowedPerMint = _amount;
         emit allowedPerMintEvent(_amount);
     }
 
     function setDiscountPercentage(uint256 _percentage) external onlyOwner{
+        require(_percentage != 0, "zero value");
         discountPercentage = _percentage;
         emit discountPercentageEvent(_percentage);
     }
 
     function setReferalDiscount(uint256 _percentage) external onlyOwner{
+        require(_percentage != 0, "zero value");
         referDiscount = _percentage;
         emit referPercentageEvent(_percentage);
         
     }
 
     function setReferalClaimPoints(uint256 _points) external onlyOwner{
+        require(_points != 0, "zero value");
         claimPoints = _points;
         emit referClaimPointsEvent(_points);
     }
 
     function setTier4MaxCap(uint256 _cap) external onlyOwner{
+        require(_cap != 0, "zero value");
         tier4maxCap = _cap; 
         emit tier4CapEvent(_cap);
     }
 
     function setAddresses(address  _operational, address  _treasury) external onlyOwner{
+        require(_operational != address(0) && _treasury != address(0), "null address");
         operationsAddress = _operational;
         treasuryAddress = _treasury;
         emit companyAddrAddedEvent(_operational, _treasury);
     }
 
     function setPaymentToken(address _paymentToken) external onlyOwner{
+        require(_paymentToken != address(0), "null address");
         paymentToken = _paymentToken;
         emit paymentTokenAddedEvent(_paymentToken);
     }
