@@ -53,7 +53,6 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     event referClaimPointsEvent(uint256 _points); 
     event tier4CapEvent(uint256 _newCap);
     event mintPricesEvent(uint256[] _teirs, uint256[] _prices);
-    event nftMintedEvent(uint256 _teir, uint256[] _ids);
     event fundsWithdrawn(uint256 _amount);
     event rewardMinted(uint256 _id);
     event toggleSaleEvent(bool);
@@ -62,7 +61,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     event toggleReferEvent(bool);
         
 
-    
+     
 
     constructor(string memory _uri, uint256 _saleCap) ERC1155(_uri) { 
         totalSaleCap = _saleCap;
@@ -106,18 +105,16 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         IERC20(paymentToken).safeTransferFrom(msg.sender, address(this), amountToPay);
         raisedCap += amountToPay;
 
-         uint256[] memory _ids;
-         uint256 tokenId;
+        uint256 tokenId;
 
         for(uint256 i=0; i<amount; i++){
 
             tokenCounts[tier]++;
             tokenId = tokenCounts[tier];
             uint256 id  = tier * 10**uint256(digit(tokenId)) + tokenId;
-            _ids[i] = id;
-        _mint(msg.sender, id, 1, "");
+            _mint(msg.sender, id, 1, "");
         }
-        emit nftMintedEvent(tier , _ids);
+
     }
 
     function digit(uint256 n) internal pure returns (uint256) {
@@ -268,7 +265,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
     function claimReward() external nonReentrant{
         uint256 usersPoints = referReward[msg.sender];
-        require(usersPoints >= claimPoints, "notEnough points");
+        require(usersPoints >= claimPoints && claimPoints != 0, "notEnough points");
         referReward[msg.sender] -= claimPoints;
             tokenCounts[1]++;
             uint256 tokenId = tokenCounts[1];
