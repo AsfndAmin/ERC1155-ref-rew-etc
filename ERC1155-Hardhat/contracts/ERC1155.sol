@@ -18,6 +18,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
     mapping(uint256 => uint256) public tokenCounts;
     mapping(uint256 => uint256) public mintPrices;
+    mapping(uint256 => uint256) public allowedPerMint;
     mapping(address => uint256) public referReward;
     mapping(address => bool) public isWhitelisted;
     mapping(uint256 => bool) public nftBlacklisted;
@@ -30,7 +31,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
     uint256 public raisedCap;
     uint256 public totalSaleCap;
-    uint256 public allowedPerMint;
+   // uint256 public allowedPerMint;
     uint256 public discountPercentage;
     uint256 public referDiscount;
     uint256 public claimPoints;
@@ -43,11 +44,11 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     event nftBlacklistedEvent(uint256 _id); 
     event nftBlacklistRemovedEvent(uint256 _id);
     event whitelistedEvent(address[] _addresses);
-    event whitelistRemovedEvent(address _address);
+    event whitelistRemovedEvent(address[] _addresses);
     event paymentTokenAddedEvent(address _paymentToken);
     event companyAddrAddedEvent(address _operationsAddress, address _treasuryAddress);
     event saleCapEvent(uint256 _cap);
-    event allowedPerMintEvent(uint256 _amount);
+    event allowedPerMintEvent(uint256[] _teirs, uint256[] _amount);
     event discountPercentageEvent(uint256 _percentage); 
     event referPercentageEvent(uint256 _percentage);
     event referClaimPointsEvent(uint256 _points); 
@@ -67,8 +68,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         totalSaleCap = _saleCap;
     }
 
-    function mint(uint256 tier, uint256 amount, address refferalAddress) public nonReentrant {
-
+    function mint(uint256 tier, uint256 amount, address refferalAddress) external nonReentrant {
 
         require(isSale ,"sale not live");
 
@@ -76,7 +76,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         require(isWhitelisted[msg.sender] , " Not whiteListed"); 
         }
 
-        require(amount > 0 && amount <= allowedPerMint, "amount Exceed per mint"); 
+        require(amount > 0 && amount <= allowedPerMint[tier], "amount Exceed per mint"); 
         require(tier >= 1 && tier <= 4, "Invalid tier");
 
         if(tier == 4){
@@ -117,6 +117,28 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
     }
 
+    function ownerMint(uint256 tier, uint256 amount, address _account) external onlyOwner {
+
+        require(tier >= 1 && tier <= 4, "Invalid tier");
+
+        uint256 tokenId;
+
+        for(uint256 i=0; i<amount; i++){
+            tokenCounts[tier]++;
+            tokenId = tokenCounts[tier];
+            uint256 id  = tier * 10**uint256(digit(tokenId)) + tokenId;
+            _mint(_account, id, 1, "");
+        }
+
+    }
+
+    function awardReferalPoints(address _account, uint256 _points) external onlyOwner{
+        require(_account != address(0) && _points != 0, "null addr or 0 points added");
+        referReward[_account] += _points; 
+    }
+
+
+
     function digit(uint256 n) internal pure returns (uint256) {
         uint256 digits = 0;
          while (n != 0) {
@@ -127,7 +149,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 }
 
 
-    function setMintPrice(uint256[] memory tier, uint256[] memory price) public onlyOwner {
+    function setMintPrice(uint256[] memory tier, uint256[] memory price) external onlyOwner {
         require(tier.length == price.length && tier.length < 5, "length misMatched");
         for(uint256 i = 0; i < tier.length; i++) {
         require(tier[i] >= 1 && tier[i] <= 4, "Invalid tier");
@@ -136,7 +158,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         emit mintPricesEvent(tier, price);
     }
 
-    function setTotalSaleCapp(uint256 _newCap) public onlyOwner {
+    function setTotalSaleCapp(uint256 _newCap) external onlyOwner {
         require(_newCap > totalSaleCap, "Invalid cap");
         totalSaleCap = _newCap;
         emit saleCapEvent(_newCap);
@@ -171,10 +193,12 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         emit whitelistedEvent(_whiteListAddress);
     }
 
-    function removeWhitelist(address _removeAddress)external onlyOwner {
-        require(_removeAddress != address(0), "Cannot add null address");
-            isWhitelisted[_removeAddress] = false;
-            emit whitelistRemovedEvent(_removeAddress);
+    function removeWhitelist(address[] memory _removeAddresses)external onlyOwner {
+        for(uint256 i=0; i < _removeAddresses.length; i++){
+            require(_removeAddresses[i] != address(0), "Cannot remove null address");
+        isWhitelisted[_removeAddresses[i]] = false;
+        }
+            emit whitelistRemovedEvent(_removeAddresses);
         }
 
     function blacklistNft(uint256 _nftId) external onlyOwner{
@@ -189,10 +213,13 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         emit nftBlacklistRemovedEvent(_nftId);
     }
 
-    function setAllowedPerMint(uint256 _amount) external onlyOwner{
-        
-        allowedPerMint = _amount;
-        emit allowedPerMintEvent(_amount);
+    function setAllowedPerMint(uint256[] memory tier, uint256[] memory amount) external onlyOwner{
+            require(tier.length == amount.length && tier.length < 5, "length misMatched");
+        for(uint256 i = 0; i < tier.length; i++) {
+        require(tier[i] >= 1 && tier[i] <= 4, "Invalid tier");
+        allowedPerMint[tier[i]] = amount[i];
+        }
+        emit allowedPerMintEvent(tier ,amount); 
     }
 
     function setDiscountPercentage(uint256 _percentage) external onlyOwner{
@@ -244,11 +271,13 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     }
 
     function toggleDiscount() external onlyOwner{
+        require(discountPercentage != 0,"discount not set");
         discountEnabled = !discountEnabled; 
         emit toggleDiscountEvent(discountEnabled);
     }
 
     function toggleRefer() external onlyOwner{
+        require(referDiscount != 0," refer discount not set");
         referEnabled = !referEnabled; 
         emit toggleReferEvent(referEnabled);
     }
