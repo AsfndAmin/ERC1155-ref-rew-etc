@@ -31,7 +31,6 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
     uint256 public raisedCap;
     uint256 public totalSaleCap;
-   // uint256 public allowedPerMint;
     uint256 public discountPercentage;
     uint256 public referDiscount;
     uint256 public claimPoints;
@@ -64,8 +63,10 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
      
 
-    constructor(string memory _uri, uint256 _saleCap) ERC1155(_uri) { 
+    constructor(string memory _uri, uint256 _saleCap, address _paymentToken) ERC1155(_uri) { 
+        require(_paymentToken != address(0), "set payment Token");
         totalSaleCap = _saleCap;
+        paymentToken = _paymentToken; 
     }
 
     function mint(uint256 tier, uint256 amount, address refferalAddress) external nonReentrant {
@@ -73,7 +74,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         require(isSale ,"sale not live");
 
         if(whitelistEnabled){
-        require(isWhitelisted[msg.sender] , " Not whiteListed"); 
+        require(isWhitelisted[msg.sender] , " Not whiteListed");  
         }
 
         require(amount > 0 && amount <= allowedPerMint[tier], "amount Exceed per mint"); 
@@ -283,6 +284,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     }
 
     function withdrawFunds() external onlyOwner{
+        require(treasuryAddress != address(0) && operationsAddress != address(0),"set addresses");
         uint256 total = IERC20(paymentToken).balanceOf(address(this));
         require(total > 1000, "low funds");
         uint256 treasuryAmount = (total*250)/1000;
@@ -290,6 +292,13 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         IERC20(paymentToken).safeTransfer(treasuryAddress, treasuryAmount);
         IERC20(paymentToken).safeTransfer(operationsAddress, operationalAmount);
         emit fundsWithdrawn(total);
+    }
+
+    function manualWithdrawFunds(address _account, uint256 _amount) external onlyOwner{
+        require(_account != address(0) && _amount != 0,"zero address");
+        require(_amount <= IERC20(paymentToken).balanceOf(address(this)),"low balance");
+        IERC20(paymentToken).safeTransfer(_account, _amount);
+        emit fundsWithdrawn(_amount);
     }
 
     function claimReward() external nonReentrant{
