@@ -20,6 +20,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     mapping(uint256 => uint256) public mintPrices;
     mapping(uint256 => uint256) public allowedPerMint;
     mapping(address => uint256) public referReward;
+    mapping(uint256 => uint256) public referPoints;
     mapping(address => bool) public isWhitelisted;
     mapping(uint256 => bool) public nftBlacklisted;
 
@@ -53,6 +54,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     event referClaimPointsEvent(uint256 _points); 
     event tier4CapEvent(uint256 _newCap);
     event mintPricesEvent(uint256[] _teirs, uint256[] _prices);
+    event referPointsEvent(uint256[] _teirs, uint256[] _points);
     event fundsWithdrawn(uint256 _amount);
     event rewardMinted(uint256 _id);
     event toggleSaleEvent(bool);
@@ -95,7 +97,8 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
             uint256 refDiscAmount = ((mintPrices[tier]*amount) * referDiscount)/ 1000;
             amountToPay = (mintPrices[tier]*amount - refDiscAmount);
             if(refferalAddress!= address(0)){
-                referReward[refferalAddress] += tier * amount; 
+                require(referPoints[tier] > 0, "set referPoints");
+                referReward[refferalAddress] += referPoints[tier] * amount; 
             }
 
         }else{
@@ -134,8 +137,8 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     }
 
     function awardReferalPoints(address _account, uint256 _points) external onlyOwner{
-        require(_account != address(0) && _points != 0, "null addr or 0 points added");
-        referReward[_account] += _points; 
+        require(_account != address(0), "null addr");
+        referReward[_account] = _points; 
     }
 
 
@@ -157,6 +160,15 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         mintPrices[tier[i]] = price[i];
         }
         emit mintPricesEvent(tier, price);
+    }
+
+    function setReferPoints(uint256[] memory tier, uint256[] memory _points) external onlyOwner {
+        require(tier.length == _points.length && tier.length < 5, "length misMatched");
+        for(uint256 i = 0; i < tier.length; i++) {
+        require(tier[i] >= 1 && tier[i] <= 4, "Invalid tier");
+        referPoints[tier[i]] = _points[i];
+        }
+        emit referPointsEvent(tier, _points);
     }
 
     function setTotalSaleCapp(uint256 _newCap) external onlyOwner {
