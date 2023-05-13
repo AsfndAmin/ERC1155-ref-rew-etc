@@ -24,13 +24,34 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
     // Mapping of staked NFT lock IDs to their lock details
     mapping(uint256 => NFTLock) private NFTId;
 
-    // Mapping of staker addresses to their total shares
-    mapping(address => uint256) private stakerShares;
+    // Mapping of staker addresses to their nft Ids
+    mapping(address => uint256[]) private stakersNfts;
 
     mapping(uint256 => uint256) public lockTimes;
     mapping(uint256 => uint256) public baseShare;
     mapping(uint256 => uint256) public bonusShare;
     mapping(uint256 => uint256) public timeLockBonusShare;
+
+    constructor(){ 
+        
+    }
+
+    function stake(uint256[] calldata tokenIds, uint256[] calldata lockTime) external {
+        require(tokenIds.length == lockTime.length, "length mis matched");
+        
+        
+
+
+    }
+
+    function getTier(uint256 number) public pure returns (uint8) {
+    uint8 tier;
+    while (number != 0) {
+        tier = uint8(number % 10);
+        number /= 10;
+    }
+        return tier;
+}
 
 }
 
