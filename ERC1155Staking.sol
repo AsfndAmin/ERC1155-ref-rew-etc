@@ -28,6 +28,9 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
     }
 
     
+    // Mapping of staker addresses to their total shares
+    mapping(address => uint256) private totalShares;
+    
     // Mapping of staked NFT lock IDs to their lock details
     mapping(uint256 => NFTLock) private NFTId;
 
@@ -43,7 +46,7 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
         
     }
 
-    function stake(uint256[] calldata tokenIds, uint256[] calldata lockTime) external{
+    function stake(uint256[] calldata tokenIds, uint256[] calldata lockTime) external nonReentrant{
         require(tokenIds.length == lockTime.length, "length mis matched");
         for(uint256 i = 0; i < tokenIds.length; i++){
             require(lockTime[i] <= lockingTimesAvailable && lockTime[i] != 0, "lock timr error");
@@ -52,9 +55,12 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
             uint256 _baseShare = baseShare[tier];
             uint256 _bonusShare = (_baseShare * bonusSharePercentage[tier])/1000;
             uint256 _timeLockShare = (_baseShare * timeLockBonusPercentage[lockTime[i]])/1000;
+            uint256 _totalShare = _baseShare + _bonusShare + _timeLockShare;
             uint256 _lockTime = lockTimes[lockTime[i]];
             nft.safeTransferFrom(msg.sender, address(this), tokenIds[i], 1, "");
-             NFTId[tokenIds[i]] = NFTLock(msg.sender, tokenIds[i], _baseShare, _bonusShare, _timeLockShare, _lockTime, block.timestamp +_lockTime );
+            NFTId[tokenIds[i]] = NFTLock(msg.sender, tokenIds[i], _baseShare, _bonusShare, _timeLockShare, _lockTime, block.timestamp + _lockTime );
+            totalShares[msg.sender] += _totalShare;
+            stakersNfts[msg.sender].push(tokenIds[i]);
         }
 
     }
