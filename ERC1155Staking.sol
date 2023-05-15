@@ -15,8 +15,8 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
 
 
 
-    uint256 lockingTimesAvailable;
-    uint256 totalSharesCreated;
+    uint256 public lockingTimesAvailable;
+    uint256 public totalSharesCreated;
 
     struct NFTLock {
         address owner;
@@ -31,19 +31,19 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
 
     
     // Mapping of staker addresses to their total shares
-    mapping(address => uint256) private totalShares;
+    mapping(address => uint256) public totalShares;
 
     // Mapping of staker addresses to their total shares
-    mapping(address => uint256) private addressIndex;
+    mapping(address => uint256) public addressIndex;
 
     address[] public stakers;
 
     
     // Mapping of staked NFT lock IDs to their lock details
-    mapping(uint256 => NFTLock) private NFTId;
+    mapping(uint256 => NFTLock) public NFTId;
 
     // Mapping of staker addresses to their nft Ids
-    mapping(address => uint256[]) private stakersNfts;
+    mapping(address => uint256[]) public stakersNfts;
 
     mapping(address => uint256) public AvailableRewards;
 
@@ -114,6 +114,23 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
             AvailableRewards[stakers[i]] = rewardAmount;
 
         }
+    }
+
+    function unlockNfts(uint256[] calldata ids) external onlyOwner{
+            for(uint256 i = 0; i < ids.length; i++){
+                NFTId[ids[i]].unlockTime = 0;
+            }
+    }
+
+    function depositRewardTokens(uint256 amount) external onlyOwner{
+        rewardToken.safeTransferFrom(msg.sender, address(this), amount);
+    }
+
+    function claimReward() external nonReentrant{
+        uint256 availableAmount = AvailableRewards[msg.sender];
+        require (availableAmount > 0, "not enough rewards");
+        rewardToken.safeTransferFrom(msg.sender, address(this), availableAmount);
+        AvailableRewards[msg.sender] = 0;
     }
 
 
