@@ -16,6 +16,7 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
 
 
     uint256 lockingTimesAvailable;
+    uint256 totalSharesCreated;
 
     struct NFTLock {
         address owner;
@@ -44,7 +45,7 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
     // Mapping of staker addresses to their nft Ids
     mapping(address => uint256[]) private stakersNfts;
 
-    mapping(uint256 => uint256) public withdrawnRewards;
+    mapping(address => uint256) public AvailableRewards;
 
     mapping(uint256 => uint256) public lockTimes;
     mapping(uint256 => uint256) public baseShare;
@@ -75,6 +76,8 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
                 _timeLockShare,
                  _lockTime,
                   block.timestamp + _lockTime, true);
+
+            totalSharesCreated += _totalShare;
             totalShares[msg.sender] += _totalShare;
             stakersNfts[msg.sender].push(tokenIds[i]);
             stakers.push(msg.sender);
@@ -90,6 +93,7 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
                  nft.safeTransferFrom(address(this), msg.sender, tokenIds[i], 1, "");
                  uint256 shares = NFTId[tokenIds[i]].baseShares + NFTId[tokenIds[i]].bonusShares + NFTId[tokenIds[i]].timeLockShare;
                  totalShares[msg.sender] -= shares;
+                 totalSharesCreated -= shares;
                  if(totalShares[msg.sender] == 0){
                      uint256 currentIndex = addressIndex[msg.sender];
                      stakers[currentIndex] = stakers[stakers.length - 1];
@@ -98,6 +102,18 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
                  }
                  delete NFTId[tokenIds[i]];
              }
+    }
+
+    function distributeReward(uint256 startIndex, uint256 endIndex, uint256 totalReward) external onlyOwner{
+
+        require(startIndex < endIndex && endIndex < stakers.length, "index error");
+        uint256 rewardPerShare = totalReward/totalSharesCreated;
+        require(rewardPerShare > 0, "reward amount less than shares");
+        for(uint256 i = startIndex; i <= endIndex; i++){
+            uint256 rewardAmount = (totalShares[stakers[i]])*rewardPerShare;
+            AvailableRewards[stakers[i]] = rewardAmount;
+
+        }
     }
 
 
