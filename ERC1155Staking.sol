@@ -100,6 +100,7 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
                      addressIndex[stakers[currentIndex]] = currentIndex;
                      stakers.pop(); 
                  }
+                 
                  delete NFTId[tokenIds[i]];
              }
     }
@@ -111,7 +112,7 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
         require(rewardPerShare > 0, "reward amount less than shares");
         for(uint256 i = startIndex; i <= endIndex; i++){
             uint256 rewardAmount = (totalShares[stakers[i]])*rewardPerShare;
-            AvailableRewards[stakers[i]] = rewardAmount;
+            AvailableRewards[stakers[i]] += rewardAmount;
 
         }
     }
@@ -121,7 +122,10 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
                 NFTId[ids[i]].unlockTime = 0;
             }
     }
+    
 
+
+     
     function depositRewardTokens(uint256 amount) external onlyOwner{
         rewardToken.safeTransferFrom(msg.sender, address(this), amount);
     }
@@ -131,6 +135,10 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
         require (availableAmount > 0, "not enough rewards");
         rewardToken.safeTransferFrom(msg.sender, address(this), availableAmount);
         AvailableRewards[msg.sender] = 0;
+    }
+
+    function totalStakers() external view returns(uint256){
+            return stakers.length - 1;
     }
 
 
