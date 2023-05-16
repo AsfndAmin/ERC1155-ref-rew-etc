@@ -39,7 +39,6 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
 
     address[] public stakers;
 
-    
     // Mapping of staked NFT lock IDs to their lock details
     mapping(uint256 => NFTLock) public NFTId;
 
@@ -48,10 +47,10 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
 
     mapping(address => uint256) public AvailableRewards;
 
-    mapping(uint256 => uint256) public lockTimes;
-    mapping(uint256 => uint256) public baseShare;
-    mapping(uint256 => uint256) public bonusSharePercentage;
-    mapping(uint256 => uint256) public timeLockBonusPercentage;
+    mapping(uint256 => uint256) public lockTimes;  // [2629743 ,7889229, 15778458, 34186659]
+    mapping(uint256 => uint256) public baseShare;  // [50 ,300, 1500, 4000]
+    mapping(uint256 => uint256) public bonusSharePercentage; // [0 ,100, 200, 250]  100 for 10%
+    mapping(uint256 => uint256) public timeLockBonusPercentage; // [0 ,100, 150, 250]  100 for 10%
 
     constructor(){ 
         
@@ -136,9 +135,6 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
             }
     }
     
-
-
-     
     function depositRewardTokens(uint256 amount) external onlyOwner{
         rewardToken.safeTransferFrom(msg.sender, address(this), amount);
     }
