@@ -75,7 +75,8 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
                _bonusShare,
                 _timeLockShare,
                  _lockTime,
-                  block.timestamp + _lockTime, true);
+                  block.timestamp + _lockTime,
+                   true);
 
             totalSharesCreated += _totalShare;
             totalShares[msg.sender] += _totalShare;
@@ -114,6 +115,31 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
                  
                  delete NFTId[tokenIds[i]];
              }
+    }
+
+    function extendLock(uint256 nftId, uint256 _newTime) external whenNotPaused nonReentrant{
+            require( NFTId[nftId].owner == msg.sender && NFTId[nftId].staked == true, "caller not owner");
+            require( NFTId[nftId].timeLock < _newTime && _newTime <= lockingTimesAvailable, "caller not owner"); 
+                uint256 tier = getTier(nftId);
+            uint256 _baseShare = baseShare[tier];
+            uint256 _bonusShare = (_baseShare * bonusSharePercentage[tier])/1000;
+            uint256 _timeLockShare = (_baseShare * timeLockBonusPercentage[_newTime])/1000;
+            uint256 totalShare = _baseShare + _bonusShare + _timeLockShare;
+            uint256 _lockTime = lockTimes[_newTime];
+            uint256 oldShare = NFTId[nftId].baseShares + NFTId[nftId].bonusShares +NFTId[nftId].timeLockShare;
+            uint256 addedShare = totalShare - oldShare;
+            NFTId[nftId] = NFTLock(
+            msg.sender,
+              nftId,
+              _baseShare,
+               _bonusShare,
+                _timeLockShare,
+                 _lockTime,
+                  block.timestamp + _lockTime,
+                   true);
+
+            totalSharesCreated += addedShare;
+            totalShares[msg.sender] += addedShare;
     }
 
 
