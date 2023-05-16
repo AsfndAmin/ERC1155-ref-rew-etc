@@ -82,9 +82,11 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
             stakersNfts[msg.sender].push(tokenIds[i]);
             stakers.push(msg.sender);
             addressIndex[msg.sender] = stakers.length - 1;
+
         }
 
     }
+
 
     function unstake(uint256[] calldata tokenIds) external nonReentrant{
              for(uint256 i = 0; i < tokenIds.length; i++){
@@ -100,10 +102,20 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
                      addressIndex[stakers[currentIndex]] = currentIndex;
                      stakers.pop(); 
                  }
+
+                 for(uint256 j = 0; j < stakersNfts[msg.sender].length; j++){
+                        if (stakersNfts[msg.sender][j] == tokenIds[i]) {
+                        // Swap the last element with the element to remove, then pop it off
+                        stakersNfts[msg.sender][j] = stakersNfts[msg.sender][stakersNfts[msg.sender].length - 1];
+                         stakersNfts[msg.sender].pop();
+                        break;
+                         }
+                 }
                  
                  delete NFTId[tokenIds[i]];
              }
     }
+
 
     function distributeReward(uint256 startIndex, uint256 endIndex, uint256 totalReward) external onlyOwner{
 
