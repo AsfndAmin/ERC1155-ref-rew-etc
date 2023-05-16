@@ -6,8 +6,9 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
-contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
+contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
 
     using SafeERC20 for IERC20;
     IERC20 rewardToken;
@@ -56,7 +57,7 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
         
     }
 
-    function stake(uint256[] calldata tokenIds, uint256[] calldata lockTime) external nonReentrant{
+    function stake(uint256[] calldata tokenIds, uint256[] calldata lockTime) external whenNotPaused nonReentrant{
         require(tokenIds.length == lockTime.length, "length mis matched");
         for(uint256 i = 0; i < tokenIds.length; i++){
             require(lockTime[i] <= lockingTimesAvailable && lockTime[i] != 0, "lock timr error");
@@ -88,7 +89,7 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
     }
 
 
-    function unstake(uint256[] calldata tokenIds) external nonReentrant{
+    function unstake(uint256[] calldata tokenIds) external whenNotPaused nonReentrant{
              for(uint256 i = 0; i < tokenIds.length; i++){
                  require( NFTId[tokenIds[i]].owner == msg.sender, "caller not owner");
                  require(NFTId[tokenIds[i]].unlockTime < block.timestamp, "not unlocked");
@@ -142,7 +143,7 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
         rewardToken.safeTransferFrom(msg.sender, address(this), amount);
     }
 
-    function claimReward() external nonReentrant{
+    function claimReward() external whenNotPaused nonReentrant{
         uint256 availableAmount = AvailableRewards[msg.sender];
         require (availableAmount > 0, "not enough rewards");
         rewardToken.safeTransferFrom(msg.sender, address(this), availableAmount);
@@ -163,6 +164,15 @@ contract Staking is ERC1155Holder, Ownable, ReentrancyGuard {
     }
         return tier;
 }
+
+
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
+    }
 
 
 }
