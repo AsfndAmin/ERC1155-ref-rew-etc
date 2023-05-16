@@ -34,6 +34,9 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
     // Mapping of staker addresses to their total shares
     mapping(address => uint256) public totalShares;
 
+    //mapping of nfts per tier staked
+    mapping(uint256 => uint256) public countPerTier;
+
     // Mapping of staker addresses to their total shares
     mapping(address => uint256) public addressIndex;
 
@@ -83,6 +86,7 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
             stakersNfts[msg.sender].push(tokenIds[i]);
             stakers.push(msg.sender);
             addressIndex[msg.sender] = stakers.length - 1;
+            countPerTier[tier] += 1;
 
         }
 
@@ -114,6 +118,8 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
                  }
                  
                  delete NFTId[tokenIds[i]];
+                 uint256 tier = getTier(tokenIds[i]);
+                 countPerTier[tier] -= 1;
              }
     }
 
