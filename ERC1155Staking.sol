@@ -48,7 +48,7 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
     // Mapping of staker addresses to their nft Ids
     mapping(address => uint256[]) public stakersNfts;
 
-    mapping(address => uint256) public AvailableRewards;
+    //mapping(address => uint256) public AvailableRewards;
 
     mapping(uint256 => uint256) public lockTimes;  // [2629743 ,7889229, 15778458, 34186659]
     mapping(uint256 => uint256) public baseShare;  // [50 ,300, 1500, 4000]
@@ -149,17 +149,51 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
     }
 
 
-    function distributeReward(uint256 startIndex, uint256 endIndex, uint256 totalReward) external onlyOwner{
+    function setLockTimes(uint256[] calldata _locktimes, uint256[] calldata _timestamps) external onlyOwner{
+        require(_locktimes.length == _timestamps.length, "length mismatched");
+        require(lockingTimesAvailable!=0 && _locktimes.length == lockingTimesAvailable - 1, "lock time error");
+        for(uint256 i = 0; i < _locktimes.length; i++){
+            lockTimes[_locktimes[i]] = _timestamps[i];
+        } 
+    }
 
-        require(startIndex < endIndex && endIndex < stakers.length, "index error");
-        uint256 rewardPerShare = totalReward/totalSharesCreated;
-        require(rewardPerShare > 0, "reward amount less than shares");
-        for(uint256 i = startIndex; i <= endIndex; i++){
-            uint256 rewardAmount = (totalShares[stakers[i]])*rewardPerShare;
-            AvailableRewards[stakers[i]] += rewardAmount;
-
+    function setBonusSharePercentage(uint256[] calldata _index, uint256[] calldata _bonusSharePercentage) external onlyOwner{
+        require(_index.length == _bonusSharePercentage.length, "length mismatched");
+        for(uint256 i = 0; i < _index.length; i++){
+            bonusSharePercentage[_index[i]] = _bonusSharePercentage[i];
         }
     }
+
+    function setBaseShares(uint256[] calldata _index, uint256[] calldata _baseShares) external onlyOwner{
+        require(_index.length == _baseShares.length, "length mismatched");
+        for(uint256 i = 0; i < _index.length; i++){
+            baseShare[_index[i]] = _baseShares[i];
+        }
+    }
+
+    function setTimeLockBonusPercentage(uint256[] calldata _index, uint256[] calldata _timeLockBonus) external onlyOwner{
+        require(_index.length == _timeLockBonus.length, "length mismatched");
+        for(uint256 i = 0; i < _index.length; i++){
+            timeLockBonusPercentage[_index[i]] = _timeLockBonus[i];
+        }
+    }
+
+    function setTotalLockingTimes(uint256 _value) external onlyOwner{
+        require(_value != 0, "cannot be 0");
+        lockingTimesAvailable = _value;
+    }
+
+    // function distributeReward(uint256 startIndex, uint256 endIndex, uint256 totalReward) external onlyOwner{
+
+    //     require(startIndex < endIndex && endIndex < stakers.length, "index error");
+    //     uint256 rewardPerShare = totalReward/totalSharesCreated;
+    //     require(rewardPerShare > 0, "reward amount less than shares");
+    //     for(uint256 i = startIndex; i <= endIndex; i++){
+    //         uint256 rewardAmount = (totalShares[stakers[i]])*rewardPerShare;
+    //         AvailableRewards[stakers[i]] += rewardAmount;
+
+    //     }
+    // }
 
     function unlockNfts(uint256[] calldata ids) external onlyOwner{
             for(uint256 i = 0; i < ids.length; i++){
@@ -171,12 +205,12 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
         rewardToken.safeTransferFrom(msg.sender, address(this), amount);
     }
 
-    function claimReward() external whenNotPaused nonReentrant{
-        uint256 availableAmount = AvailableRewards[msg.sender];
-        require (availableAmount > 0, "not enough rewards");
-        rewardToken.safeTransferFrom(msg.sender, address(this), availableAmount);
-        AvailableRewards[msg.sender] = 0;
-    }
+    // function claimReward() external whenNotPaused nonReentrant{
+    //     uint256 availableAmount = AvailableRewards[msg.sender];
+    //     require (availableAmount > 0, "not enough rewards");
+    //     rewardToken.safeTransferFrom(msg.sender, address(this), availableAmount);
+    //     AvailableRewards[msg.sender] = 0;
+    // }
 
     function totalStakers() external view returns(uint256){
             return stakers.length - 1;
