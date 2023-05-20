@@ -3,15 +3,12 @@ pragma solidity =0.8.17;
 
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
 
-    using SafeERC20 for IERC20;
-    IERC20 rewardToken;
     IERC1155 nft;
 
 
@@ -25,7 +22,7 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
         uint256 baseShares;
         uint256 bonusShares;
         uint256 timeLockShare;
-        uint256 timeLock;
+        uint256 lockTime;
         uint256 unlockTime;
         bool staked;
     }
@@ -37,7 +34,7 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
     //mapping of nfts per tier staked
     mapping(uint256 => uint256) public countPerTier;
 
-    // Mapping of staker addresses to their total shares
+    // Mapping of staker addresses to their index in array
     mapping(address => uint256) public addressIndex;
 
     address[] public stakers;
@@ -49,8 +46,8 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
     mapping(address => uint256[]) public stakersNfts;
 
     //mapping(address => uint256) public AvailableRewards;
-
-    mapping(uint256 => uint256) public lockTimes;  // [2629743 ,7889229, 15778458, 34186659]
+                                                    //[1,2,3,4]
+    mapping(uint256 => uint256) public lockTimes;  // [60 ,7889229, 15778458, 34186659]
     mapping(uint256 => uint256) public baseShare;  // [50 ,300, 1500, 4000]
     mapping(uint256 => uint256) public bonusSharePercentage; // [0 ,100, 200, 250]  100 for 10%
     mapping(uint256 => uint256) public timeLockBonusPercentage; // [0 ,100, 150, 250]  100 for 10%
@@ -63,14 +60,14 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
         require(tokenIds.length == lockTime.length, "length mis matched");
         for(uint256 i = 0; i < tokenIds.length; i++){
             require(lockTime[i] <= lockingTimesAvailable && lockTime[i] != 0, "lock timr error");
-            require(nft.balanceOf(msg.sender, tokenIds[i]) == 1 , "caller not owner");
+            nft.safeTransferFrom(msg.sender, address(this), tokenIds[i], 1, "");
+            //require(nft.balanceOf(msg.sender, tokenIds[i]) == 1 , "caller not owner");
             uint256 tier = getTier(tokenIds[i]);
             uint256 _baseShare = baseShare[tier];
             uint256 _bonusShare = (_baseShare * bonusSharePercentage[tier])/1000;
             uint256 _timeLockShare = (_baseShare * timeLockBonusPercentage[lockTime[i]])/1000;
             uint256 _totalShare = _baseShare + _bonusShare + _timeLockShare;
             uint256 _lockTime = lockTimes[lockTime[i]];
-            nft.safeTransferFrom(msg.sender, address(this), tokenIds[i], 1, "");
             NFTId[tokenIds[i]] = NFTLock(
                 msg.sender,
               tokenIds[i],
@@ -82,10 +79,13 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
                    true);
 
             totalSharesCreated += _totalShare;
+            if(totalShares[msg.sender] == 0){
+             stakers.push(msg.sender);
+             addressIndex[msg.sender] = stakers.length - 1;
+            }
             totalShares[msg.sender] += _totalShare;
             stakersNfts[msg.sender].push(tokenIds[i]);
-            stakers.push(msg.sender);
-            addressIndex[msg.sender] = stakers.length - 1;
+
             countPerTier[tier] += 1;
 
         }
@@ -125,7 +125,7 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
 
     function extendLock(uint256 nftId, uint256 _newTime) external whenNotPaused nonReentrant{
             require( NFTId[nftId].owner == msg.sender && NFTId[nftId].staked == true, "caller not owner");
-            require( NFTId[nftId].timeLock < _newTime && _newTime <= lockingTimesAvailable, "caller not owner"); 
+            require( NFTId[nftId].lockTime < lockTimes[_newTime] && _newTime <= lockingTimesAvailable, "time error"); 
                 uint256 tier = getTier(nftId);
             uint256 _baseShare = baseShare[tier];
             uint256 _bonusShare = (_baseShare * bonusSharePercentage[tier])/1000;
@@ -151,7 +151,7 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
 
     function setLockTimes(uint256[] calldata _locktimes, uint256[] calldata _timestamps) external onlyOwner{
         require(_locktimes.length == _timestamps.length, "length mismatched");
-        require(lockingTimesAvailable!=0 && _locktimes.length == lockingTimesAvailable - 1, "lock time error");
+        require(lockingTimesAvailable != 0 , "lock time error");
         for(uint256 i = 0; i < _locktimes.length; i++){
             lockTimes[_locktimes[i]] = _timestamps[i];
         } 
@@ -183,40 +183,20 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
         lockingTimesAvailable = _value;
     }
 
-    // function distributeReward(uint256 startIndex, uint256 endIndex, uint256 totalReward) external onlyOwner{
-
-    //     require(startIndex < endIndex && endIndex < stakers.length, "index error");
-    //     uint256 rewardPerShare = totalReward/totalSharesCreated;
-    //     require(rewardPerShare > 0, "reward amount less than shares");
-    //     for(uint256 i = startIndex; i <= endIndex; i++){
-    //         uint256 rewardAmount = (totalShares[stakers[i]])*rewardPerShare;
-    //         AvailableRewards[stakers[i]] += rewardAmount;
-
-    //     }
-    // }
 
     function unlockNfts(uint256[] calldata ids) external onlyOwner{
             for(uint256 i = 0; i < ids.length; i++){
                 NFTId[ids[i]].unlockTime = 0;
             }
     }
-    
-    function depositRewardTokens(uint256 amount) external onlyOwner{
-        rewardToken.safeTransferFrom(msg.sender, address(this), amount);
-    }
-
-    // function claimReward() external whenNotPaused nonReentrant{
-    //     uint256 availableAmount = AvailableRewards[msg.sender];
-    //     require (availableAmount > 0, "not enough rewards");
-    //     rewardToken.safeTransferFrom(msg.sender, address(this), availableAmount);
-    //     AvailableRewards[msg.sender] = 0;
-    // }
 
     function totalStakers() external view returns(uint256){
-            return stakers.length - 1;
+            return stakers.length;
     }
 
-
+    function setNFTAddress(address _nftContract)external onlyOwner{
+            nft = IERC1155(_nftContract);
+    }
 
     function getTier(uint256 tokenId) public pure returns (uint8) {
     uint8 tier;
@@ -226,6 +206,16 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
     }
         return tier;
 }
+
+    function getStakersNfts(address _address) external view returns(uint256[] memory){
+            uint256[] memory nfts = stakersNfts[_address];
+            return nfts;
+    }
+
+    function getStakersAddresses() external view returns(address[] memory){   
+             return stakers;
+    }
+
 
 
     function pause() public onlyOwner {
