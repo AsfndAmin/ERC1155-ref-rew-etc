@@ -10,9 +10,6 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
 
     IERC1155 nft;
-
-
-
     uint256 public lockingTimesAvailable;
     uint256 public totalSharesCreated;
 
@@ -35,7 +32,7 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
     mapping(uint256 => uint256) public countPerTier;
 
     // Mapping of staker addresses to their index in array
-    mapping(address => uint256) public addressIndex;
+    mapping(address => uint256)  addressIndex;
 
     address[] public stakers;
 
@@ -43,7 +40,7 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
     mapping(uint256 => NFTLock) public NFTId;
 
     // Mapping of staker addresses to their nft Ids
-    mapping(address => uint256[]) public stakersNfts;
+    mapping(address => uint256[]) stakersNfts;
 
     //mapping(address => uint256) public AvailableRewards;
                                                     //[1,2,3,4]
@@ -59,7 +56,7 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
     function stake(uint256[] calldata tokenIds, uint256[] calldata lockTime) external whenNotPaused nonReentrant{
         require(tokenIds.length == lockTime.length, "length mis matched");
         for(uint256 i = 0; i < tokenIds.length; i++){
-            require(lockTime[i] <= lockingTimesAvailable && lockTime[i] != 0, "lock timr error");
+            require(lockTime[i] <= lockingTimesAvailable && lockTime[i] != 0, "lock time error");
             nft.safeTransferFrom(msg.sender, address(this), tokenIds[i], 1, "");
             //require(nft.balanceOf(msg.sender, tokenIds[i]) == 1 , "caller not owner");
             uint256 tier = getTier(tokenIds[i]);
@@ -215,7 +212,6 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
     function getStakersAddresses() external view returns(address[] memory){   
              return stakers;
     }
-
 
 
     function pause() public onlyOwner {
