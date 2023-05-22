@@ -49,6 +49,11 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
     mapping(uint256 => uint256) public bonusSharePercentage; // [0 ,100, 200, 250]  100 for 10%
     mapping(uint256 => uint256) public timeLockBonusPercentage; // [0 ,100, 150, 250]  100 for 10%
 
+    event staked(address owner, uint256 nftId, uint256 shares, uint256 unlocktime);
+    event lockExtended(uint256 nftId, uint256 newUnlockTime);
+    event withdrawn(uint256[]  unstaked);  
+
+ 
     constructor(){ 
         
     }
@@ -65,6 +70,7 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
             uint256 _timeLockShare = (_baseShare * timeLockBonusPercentage[lockTime[i]])/1000;
             uint256 _totalShare = _baseShare + _bonusShare + _timeLockShare;
             uint256 _lockTime = lockTimes[lockTime[i]];
+            uint256 unlockTime = block.timestamp + _lockTime;
             NFTId[tokenIds[i]] = NFTLock(
                 msg.sender,
               tokenIds[i],
@@ -72,7 +78,7 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
                _bonusShare,
                 _timeLockShare,
                  _lockTime,
-                  block.timestamp + _lockTime,
+                  unlockTime,
                    true);
 
             totalSharesCreated += _totalShare;
@@ -84,7 +90,7 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
             stakersNfts[msg.sender].push(tokenIds[i]);
 
             countPerTier[tier] += 1;
-
+            emit staked(msg.sender, tokenIds[i], _totalShare, unlockTime);
         }
 
     }
@@ -118,6 +124,7 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
                  uint256 tier = getTier(tokenIds[i]);
                  countPerTier[tier] -= 1;
              }
+             emit withdrawn(tokenIds);
     }
 
     function extendLock(uint256 nftId, uint256 _newTime) external whenNotPaused nonReentrant{
@@ -143,6 +150,7 @@ contract Staking is ERC1155Holder, Ownable, Pausable, ReentrancyGuard {
 
             totalSharesCreated += addedShare;
             totalShares[msg.sender] += addedShare;
+            emit lockExtended(nftId, _newTime);
     }
 
 
