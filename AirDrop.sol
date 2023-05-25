@@ -44,6 +44,7 @@ contract AirDrop is Ownable, ReentrancyGuard {
         userClaim[user].claimedTokens = 0;
     }
     totalAmount = 0;
+    delete allocated;
 }
 
 
