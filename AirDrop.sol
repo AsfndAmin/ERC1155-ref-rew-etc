@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.10;
+pragma solidity =0.8.17;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract AirDrop is Ownable, ReentrancyGuard {
 
-    using SafeERC20 for ERC20;
+    using SafeERC20 for IERC20;
     address public tokenAddress;
     address[] allocated;
 
@@ -51,7 +50,7 @@ contract AirDrop is Ownable, ReentrancyGuard {
     function startAirdrop() public onlyOwner{
         require(!airDropEnabled, "already started");
         require(totalAmount > 0, "allocate first");
-        ERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), totalAmount); 
+        IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), totalAmount); 
         airDropEnabled = true;
 
     }
@@ -69,7 +68,7 @@ contract AirDrop is Ownable, ReentrancyGuard {
         );
 
         userData.claimedTokens = withdrawable;
-        ERC20(tokenAddress).safeTransfer(msg.sender, withdrawable); 
+        IERC20(tokenAddress).safeTransfer(msg.sender, withdrawable); 
     }
 
     function getUserclaimedTokens(address user) public view returns (uint256) {
