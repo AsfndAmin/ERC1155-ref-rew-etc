@@ -26,6 +26,13 @@ contract AirDrop is Ownable, ReentrancyGuard, Pausable {
     mapping(address => userClaimData) public userClaim;
     mapping(address => bool) public blackListed;
 
+    event rewardClaimed(address _user, uint256 _amount);
+    event claimPeriodChanged(uint256 _startTime, uint256 _endTime);
+    event fundsDeposited(uint256 _amount);
+    event FundsWithdrawn(uint256 _amount);
+    event blacklisted(address _user, bool _is);
+    event removedBlacklisted(address _user, bool _is);
+
         constructor(address _tokenAddress) {
         tokenAddress = _tokenAddress;
     }
@@ -44,7 +51,7 @@ contract AirDrop is Ownable, ReentrancyGuard, Pausable {
 
         //to auto remove all allocations
     function removeAllAllocations() public onlyOwner {
-        require(!airDropEnabled, "airdrop started cannot delete now");
+
     for (uint256 i = 0; i < allocated.length; i++) {
         address user = allocated[i];
         userClaim[user].totalTokens = 0;
@@ -64,6 +71,7 @@ contract AirDrop is Ownable, ReentrancyGuard, Pausable {
         claimEndDate = endTime;
         IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), totalAmount); 
         airDropEnabled = true;
+        emit fundsDeposited(totalAmount);
 
     }
 
@@ -72,28 +80,27 @@ contract AirDrop is Ownable, ReentrancyGuard, Pausable {
         require(claimStartDate < block.timestamp && claimEndDate > block.timestamp, "air drop not started or ended");
         require(!blackListed[msg.sender], "blacklisted");
         userClaimData storage userData = userClaim[msg.sender];
-        require(userData.claimedTokens == 0, "already calimed");
         uint256 withdrawable =  userData.totalTokens;
+        uint256 availableTokens = withdrawable - userData.claimedTokens; 
+        require(availableTokens  > 0, "nothing to claim");
 
-        require(
-            withdrawable > 0 ,
-            "nothing to claim"
-        );
-
-        userData.claimedTokens = withdrawable;
-        IERC20(tokenAddress).safeTransfer(msg.sender, withdrawable); 
-        totalClaimed += withdrawable;
+        userData.claimedTokens += availableTokens;
+        IERC20(tokenAddress).safeTransfer(msg.sender, availableTokens); 
+        totalClaimed += availableTokens;
+        emit rewardClaimed(msg.sender, availableTokens);
     }
 
     function withdrawAllFunds()external onlyOwner{
        uint256 totalFunds = IERC20(tokenAddress).balanceOf(address(this)); 
        IERC20(tokenAddress).safeTransfer(msg.sender, totalFunds); 
+       emit FundsWithdrawn(totalFunds);
     }
 
     function changeClaimTime(uint256 startTime, uint256 endTime)external onlyOwner {
         require(startTime < endTime, " time error");
         claimStartDate = startTime;
         claimEndDate = endTime;
+        emit claimPeriodChanged(startTime, endTime);
     }
 
     function changeTokenAddress(address token) external onlyOwner{
@@ -120,6 +127,13 @@ contract AirDrop is Ownable, ReentrancyGuard, Pausable {
 
     function blackListUser(address account)external onlyOwner{
         blackListed[account] = true;
+        emit blacklisted(account , true);
+    }
+
+      function removeBlackListUser(address account)external onlyOwner{
+          require(blackListed[account], "not blacklisted");
+        blackListed[account] = false;
+        emit removedBlacklisted(account , false);
     }
 
     function getUserclaimedTokens(address user) public view returns (uint256) {
