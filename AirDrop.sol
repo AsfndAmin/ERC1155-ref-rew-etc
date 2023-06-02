@@ -51,7 +51,6 @@ contract AirDrop is Ownable, ReentrancyGuard, Pausable {
 
         //to auto remove all allocations
     function removeAllAllocations() public onlyOwner {
-
     for (uint256 i = 0; i < allocated.length; i++) {
         address user = allocated[i];
         userClaim[user].totalTokens = 0;
@@ -110,19 +109,21 @@ contract AirDrop is Ownable, ReentrancyGuard, Pausable {
     }
 
     function adjustRewardAmount(address user, uint256 newAmount, uint256 newTotalShares)external onlyOwner{
-            require(!airDropEnabled, "airdrop started cannot delete now");
+            require(!airDropEnabled, "airdrop started cannot adjust now");
             uint256 previousAmount = userClaim[user].totalTokens;
             require(previousAmount > 0 , "allocate First");
             userClaim[user].totalTokens = newAmount;
             totalSharesDistributed = newTotalShares;
             if(newAmount > previousAmount){
-                totalAmount += (newAmount - previousAmount);
-                IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), (newAmount - previousAmount)); 
+                totalAmount += (newAmount - previousAmount);               
             }else{
                 totalAmount -= (previousAmount - newAmount);
-                IERC20(tokenAddress).safeTransfer(msg.sender, (previousAmount - newAmount)); 
+               
             }
+    }
 
+    function setTotalSharesDistributed(uint256 newTotalShares)external onlyOwner{
+            totalSharesDistributed = newTotalShares;
     }
 
     function blackListUser(address account)external onlyOwner{
