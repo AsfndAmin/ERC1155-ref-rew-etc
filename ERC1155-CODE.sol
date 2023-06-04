@@ -2291,12 +2291,6 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         emit fundsWithdrawn(total);
     }
 
-    function manualWithdrawFunds(address _account, uint256 _amount) external onlyOwner{
-        require(_account != address(0) && _amount != 0,"zero address");
-        require(_amount <= IERC20(paymentToken).balanceOf(address(this)),"low balance");
-        IERC20(paymentToken).safeTransfer(_account, _amount);
-        emit fundsWithdrawn(_amount);
-    }
 
     function claimReward() external nonReentrant{
         uint256 usersPoints = referReward[msg.sender];
