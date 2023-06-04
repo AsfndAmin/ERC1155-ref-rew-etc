@@ -300,16 +300,6 @@ abstract contract Ownable is Context {
         require(owner() == _msgSender(), "Ownable: caller is not the owner");
     }
 
-    /**
-     * @dev Leaves the contract without owner. It will not be possible to call
-     * `onlyOwner` functions anymore. Can only be called by the current owner.
-     *
-     * NOTE: Renouncing ownership will leave the contract without an owner,
-     * thereby removing any functionality that is only available to the owner.
-     */
-    function renounceOwnership() public virtual onlyOwner {
-        _transferOwnership(address(0));
-    }
 
     /**
      * @dev Transfers ownership of the contract to a new account (`newOwner`).
@@ -2040,10 +2030,25 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
      
 
-    constructor(string memory _uri, uint256 _saleCap, address _paymentToken) ERC1155(_uri) { 
+    constructor(
+        string memory _uri,
+     uint256 _saleCap,
+      address _paymentToken,
+       uint256[] memory tier,
+        uint256[] memory price,
+         uint256[] memory points
+         ) ERC1155(_uri) { 
         require(_paymentToken != address(0), "set payment Token");
+        require(_saleCap > 0, "0 sale cap");
+        require(tier.length == price.length && tier.length == points.length && tier.length < 5, "length misMatched"); 
         totalSaleCap = _saleCap;
         paymentToken = _paymentToken; 
+        for(uint256 i = 0; i < tier.length; i++) {
+        require(tier[i] >= 1 && tier[i] <= 4 , "Invalid tier");
+        require(points[i] > 0 && price[i] >=1000, "0 points/price<1000");
+        mintPrices[tier[i]] = price[i];
+        referPoints[tier[i]] = points[i];
+        }
     }
 
     function mint(uint256 tier, uint256 amount, address refferalAddress) external nonReentrant {
@@ -2099,6 +2104,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     function ownerMint(uint256 tier, uint256 amount, address _account) external onlyOwner {
 
         require(tier >= 1 && tier <= 4, "Invalid tier");
+        require(_account != address(0) && amount != 0, "zero address/amount"); 
 
         uint256 tokenId;
 
@@ -2131,7 +2137,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     function setMintPrice(uint256[] memory tier, uint256[] memory price) external onlyOwner {
         require(tier.length == price.length && tier.length < 5, "length misMatched");
         for(uint256 i = 0; i < tier.length; i++) {
-        require(tier[i] >= 1 && tier[i] <= 4, "Invalid tier");
+        require(tier[i] >= 1 && tier[i] <= 4 && price[i] >=1000, "Invalid tier/price<1000");
         mintPrices[tier[i]] = price[i];
         }
         emit mintPricesEvent(tier, price);
@@ -2140,7 +2146,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     function setReferPoints(uint256[] memory tier, uint256[] memory _points) external onlyOwner {
         require(tier.length == _points.length && tier.length < 5, "length misMatched");
         for(uint256 i = 0; i < tier.length; i++) {
-        require(tier[i] >= 1 && tier[i] <= 4, "Invalid tier");
+        require(tier[i] >= 1 && tier[i] <= 4 && _points[i] > 0, "Invalid tier/0 points");
         referPoints[tier[i]] = _points[i];
         }
         emit referPointsEvent(tier, _points);
