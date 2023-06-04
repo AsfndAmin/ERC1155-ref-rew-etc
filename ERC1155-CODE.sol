@@ -2091,13 +2091,17 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
         uint256 tokenId;
 
+        
+        uint256[] memory ids = new uint256[](amount);
+        uint256[] memory amounts = new uint256[](amount);
         for(uint256 i=0; i<amount; i++){
-
-            tokenCounts[tier]++;
-            tokenId = tokenCounts[tier];
-            uint256 id  = tier * 10**uint256(digit(tokenId)) + tokenId;
-            _mint(msg.sender, id, 1, "");
-        }
+        tokenId = tokenCounts[tier] + i + 1;
+         uint256 id = tier * 10**uint256(digit(tokenId)) + tokenId;
+        ids[i] = id;
+        amounts[i] = 1;
+     }
+        tokenCounts[tier] += amount;
+        _mintBatch(msg.sender, ids, amounts, "");
 
     }
 
