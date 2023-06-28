@@ -23,6 +23,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     mapping(uint256 => uint256) public referPoints;
     mapping(address => bool) public isWhitelisted;
     mapping(uint256 => bool) public nftBlacklisted;
+    mapping(address => uint256) public calimedRewardNfts;
 
     bool public whitelistEnabled;
     bool public discountEnabled;
@@ -57,6 +58,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     event referPointsEvent(uint256[] _teirs, uint256[] _points);
     event fundsWithdrawn(uint256 _amount);
     event rewardMinted(uint256 _id);
+    event claimedNfts(address _user, uint256 _totalReward);
     event toggleSaleEvent(bool);
     event toggleWhitelistEvent(bool);
     event toggleDiscountEvent(bool);
@@ -65,10 +67,25 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
      
 
-    constructor(string memory _uri, uint256 _saleCap, address _paymentToken) ERC1155(_uri) { 
+    constructor(
+        string memory _uri,
+     uint256 _saleCap,
+      address _paymentToken,
+       uint256[] memory tier,
+        uint256[] memory price,
+         uint256[] memory points
+         ) ERC1155(_uri) { 
         require(_paymentToken != address(0), "set payment Token");
+        require(_saleCap > 0, "0 sale cap");
+        require(tier.length == price.length && tier.length == points.length && tier.length < 5, "length misMatched"); 
         totalSaleCap = _saleCap;
         paymentToken = _paymentToken; 
+        for(uint256 i = 0; i < tier.length; i++) {
+        require(tier[i] >= 1 && tier[i] <= 4 , "Invalid tier");
+        require(points[i] > 0 && price[i] >=1000, "0 points/price<1000");
+        mintPrices[tier[i]] = price[i];
+        referPoints[tier[i]] = points[i];
+        }
     }
 
     function mint(uint256 tier, uint256 amount, address refferalAddress) external nonReentrant {
@@ -111,19 +128,24 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
 
         uint256 tokenId;
 
+        
+        uint256[] memory ids = new uint256[](amount);
+        uint256[] memory amounts = new uint256[](amount);
         for(uint256 i=0; i<amount; i++){
-
-            tokenCounts[tier]++;
-            tokenId = tokenCounts[tier];
-            uint256 id  = tier * 10**uint256(digit(tokenId)) + tokenId;
-            _mint(msg.sender, id, 1, "");
-        }
+        tokenId = tokenCounts[tier] + i + 1;
+         uint256 id = tier * 10**uint256(digit(tokenId)) + tokenId;
+        ids[i] = id;
+        amounts[i] = 1;
+     }
+        tokenCounts[tier] += amount;
+        _mintBatch(msg.sender, ids, amounts, "");
 
     }
 
     function ownerMint(uint256 tier, uint256 amount, address _account) external onlyOwner {
 
         require(tier >= 1 && tier <= 4, "Invalid tier");
+        require(_account != address(0) && amount != 0, "zero address/amount"); 
 
         uint256 tokenId;
 
@@ -156,7 +178,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     function setMintPrice(uint256[] memory tier, uint256[] memory price) external onlyOwner {
         require(tier.length == price.length && tier.length < 5, "length misMatched");
         for(uint256 i = 0; i < tier.length; i++) {
-        require(tier[i] >= 1 && tier[i] <= 4, "Invalid tier");
+        require(tier[i] >= 1 && tier[i] <= 4 && price[i] >=1000, "Invalid tier/price<1000");
         mintPrices[tier[i]] = price[i];
         }
         emit mintPricesEvent(tier, price);
@@ -165,7 +187,7 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
     function setReferPoints(uint256[] memory tier, uint256[] memory _points) external onlyOwner {
         require(tier.length == _points.length && tier.length < 5, "length misMatched");
         for(uint256 i = 0; i < tier.length; i++) {
-        require(tier[i] >= 1 && tier[i] <= 4, "Invalid tier");
+        require(tier[i] >= 1 && tier[i] <= 4 && _points[i] > 0, "Invalid tier/0 points");
         referPoints[tier[i]] = _points[i];
         }
         emit referPointsEvent(tier, _points);
@@ -306,12 +328,6 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
         emit fundsWithdrawn(total);
     }
 
-    function manualWithdrawFunds(address _account, uint256 _amount) external onlyOwner{
-        require(_account != address(0) && _amount != 0,"zero address");
-        require(_amount <= IERC20(paymentToken).balanceOf(address(this)),"low balance");
-        IERC20(paymentToken).safeTransfer(_account, _amount);
-        emit fundsWithdrawn(_amount);
-    }
 
     function claimReward() external nonReentrant{
         uint256 usersPoints = referReward[msg.sender];
@@ -321,7 +337,9 @@ contract MyERC1155 is ERC1155URIStorage , Ownable, ReentrancyGuard {
             uint256 tokenId = tokenCounts[1];
             uint256 id  = 1 * 10**uint256(digit(tokenId)) + tokenId;            
         _mint(msg.sender, id, 1, "");
+        calimedRewardNfts[msg.sender] += 1;
        emit rewardMinted(id);
+       emit claimedNfts(msg.sender, calimedRewardNfts[msg.sender]);
     }
 
       /**
