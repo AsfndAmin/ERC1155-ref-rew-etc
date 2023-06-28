@@ -13,6 +13,8 @@ contract MyERC1155 is ERC1155URIStorage, ERC2981, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     string public contractURI;
+    // Collection name
+    string public name = "TOM'S COLLECTION";
 
     uint256  private constant TIER_1 = 1;
     uint256  private constant TIER_2 = 2;
@@ -78,15 +80,13 @@ contract MyERC1155 is ERC1155URIStorage, ERC2981, Ownable, ReentrancyGuard {
        uint256[] memory tier,
         uint256[] memory price,
          uint256[] memory points,
-         uint96 _royaltyFeesInBips,
-          string memory _contractURI
+         uint96 _royaltyFeesInBips
          ) ERC1155(_uri) { 
         require(_paymentToken != address(0) && _royalityReceiver != address(0) , "zero address");
         require(_saleCap > 0, "0 sale cap");
         require(tier.length == price.length && tier.length == points.length && tier.length < 5, "length misMatched"); 
         totalSaleCap = _saleCap;
         paymentToken = _paymentToken; 
-        contractURI = _contractURI;
         _setDefaultRoyalty(_royalityReceiver, _royaltyFeesInBips);
         for(uint256 i = 0; i < tier.length; i++) {
         require(tier[i] >= 1 && tier[i] <= 4 , "Invalid tier");
@@ -388,14 +388,14 @@ contract MyERC1155 is ERC1155URIStorage, ERC2981, Ownable, ReentrancyGuard {
         _safeBatchTransferFrom(from, to, ids, amounts, data);
     }
 
-      function supportsInterface(bytes4 interfaceId) public view override(ERC1155, ERC2981) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view override(ERC1155, ERC2981) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
     function setRoyaltyInfo(address _receiver, uint96 _royaltyFeesInBips) public onlyOwner {
         _setDefaultRoyalty(_receiver, _royaltyFeesInBips); 
     }
-
+    //if 2981 is not implemented we can use old method
     function setContractURI(string calldata _contractURI) public onlyOwner {
         contractURI = _contractURI;
     }
