@@ -42,7 +42,6 @@ contract MyERC1155 is ERC1155URIStorage, ERC2981, Ownable, ReentrancyGuard {
     uint256 public referDiscount;
     uint256 public claimPoints;
     uint256 public tier4maxCap;
-    uint256 public VATPercentage;
 
     address  public  operationsAddress;
     address  public treasuryAddress;
@@ -57,7 +56,6 @@ contract MyERC1155 is ERC1155URIStorage, ERC2981, Ownable, ReentrancyGuard {
     event saleCapEvent(uint256 _cap);
     event allowedPerMintEvent(uint256[] _teirs, uint256[] _amount);
     event discountPercentageEvent(uint256 _percentage);
-    event VATPercentageEvent(uint256 _percentage); 
     event referPercentageEvent(uint256 _percentage);
     event referClaimPointsEvent(uint256 _points); 
     event tier4CapEvent(uint256 _newCap);
@@ -98,7 +96,7 @@ contract MyERC1155 is ERC1155URIStorage, ERC2981, Ownable, ReentrancyGuard {
         }
     }
 
-    function mint(uint256 tier, uint256 amount, address refferalAddress) external nonReentrant {
+    function mint(uint256 tier, uint256 amount, uint256 VATPercentage, address refferalAddress) external nonReentrant {
 
         require(isSale ,"sale not live");
 
@@ -182,8 +180,6 @@ contract MyERC1155 is ERC1155URIStorage, ERC2981, Ownable, ReentrancyGuard {
             referReward[_account[i]] = _points[i]; 
         }
     }
-
-
 
     function digit(uint256 n) internal pure returns (uint256) {
         uint256 digits = 0;
@@ -283,11 +279,6 @@ contract MyERC1155 is ERC1155URIStorage, ERC2981, Ownable, ReentrancyGuard {
         emit discountPercentageEvent(_percentage);
     }
 
-    function setVATPercentage(uint256 _percentage) external onlyOwner{
-        require(_percentage != 0, "zero value");
-        VATPercentage = _percentage;
-        emit VATPercentageEvent(_percentage);
-    }
 
     function setReferalDiscount(uint256 _percentage) external onlyOwner{
         require(_percentage != 0, "zero value");
