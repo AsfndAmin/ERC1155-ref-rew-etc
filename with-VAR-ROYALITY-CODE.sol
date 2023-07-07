@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT 
 // File: @openzeppelin/contracts/security/ReentrancyGuard.sol
 
 
@@ -2242,9 +2242,9 @@ contract MyERC1155 is ERC1155URIStorage, ERC2981, Ownable, ReentrancyGuard {
         uint256 vatAmount = (amountToPay * VATPercentage)/ 1000;//100 for 10 percent
         uint256 finalAmount = amountToPay + vatAmount;
 
-        require(finalAmount + raisedCap <= totalSaleCap, "cannot mint more");
+        require(amountToPay + raisedCap <= totalSaleCap, "cannot mint more");
         IERC20(paymentToken).safeTransferFrom(msg.sender, address(this), finalAmount);
-        raisedCap += finalAmount;
+        raisedCap += amountToPay;
 
         uint256 tokenId;
 
